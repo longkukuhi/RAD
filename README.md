@@ -90,7 +90,7 @@ Download and unzip `realiad_1024` and `realiad_jsons` in `../Real-IAD`.
         |-- ....
 ```
 ### 📁 3D-ADAM
-The 3D-ADAM dataset can be found publicly available in our [HuggingFace](https://huggingface.co/datasets/pmchard/3D-ADAM_anomalib) repository.
+The 3D-ADAM dataset can be found publicly available in the [HuggingFace](https://huggingface.co/datasets/pmchard/3D-ADAM_anomalib) repository.
 
 Ignore the **/xyz/** since we only use the RGB modality and download the dataset to `../3D-ADAM_anomalib`
 ```
