@@ -27,7 +27,7 @@ cd RAD
 pip install -r requirements.txt
 ```
 ❗ You can modify the PyTorch version to suit your machine.
-Experiments are conducted on a NVIDIA GeForce RTX 5090 (32GB). Same GPU and package version are recommended.
+Experiments are conducted on an NVIDIA GeForce RTX 5090 (32GB). Same GPU and package version are recommended.
 
 ## 🗃️ Prepare Datasets
 Noted that `../` is the upper directory of RAD code. It is where we keep all the datasets by default.
