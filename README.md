@@ -1,5 +1,5 @@
 <h1 align="center">
-🙋‍♂️Is Training Necessary for Anomaly Detction?</h1>
+🙋‍♂️[ICML2026] Is Task-Specific Training Necessary for Anomaly Detction?</h1>
 
 <p align = "center">
 <img src="assets/arch.png">
@@ -10,6 +10,7 @@
 
 ## 📰 Updates
 - [2026/01/28] The code of RAD is released! 🎉
+- [2026/05/01] RAD is accepted by ICML2026! 🎉
 
 ## 🗞️ Contents
 - [Setup](#-setup)
