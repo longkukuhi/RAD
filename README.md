@@ -6,7 +6,7 @@
 </p>
 
 
-* **Official PyTorch implementation for paper:  "Is Training Necessary for Anomaly Detction?"** <br>
+* **Official PyTorch implementation for paper:  "Is Task-Specific Training Necessary for Anomaly Detction?"** <br>
 
 ## 📰 Updates
 - [2026/01/28] The code of RAD is released! 🎉
