@@ -1,12 +1,12 @@
 <h1 align="center">
-🙋‍♂️[ICML2026] Is Task-Specific Training Necessary for Anomaly Detction?</h1>
+🙋‍♂️[ICML2026] Is Task-Specific Training Necessary for Anomaly Detection?</h1>
 
 <p align = "center">
 <img src="assets/arch.png">
 </p>
 
 
-* **Official PyTorch implementation for paper:  "Is Task-Specific Training Necessary for Anomaly Detction?"** <br>
+* **Official PyTorch implementation for paper:  "Is Task-Specific Training Necessary for Anomaly Detection?"** <br>
 
 ## 📰 Updates
 - [2026/01/28] The code of RAD is released! 🎉
@@ -31,7 +31,7 @@ pip install -r requirements.txt
 Experiments are conducted on an NVIDIA GeForce RTX 5090 (32GB). Same GPU and package version are recommended.
 
 ## 🗃️ Prepare Datasets
-Noted that `../` is the upper directory of RAD code. It is where we keep all the datasets by default.
+Note that `../` is the upper directory of RAD code. It is where we keep all the datasets by default.
 You can also alter it according to your need, just remember to modify the `data_path` in the code. 
 
 ### 📦 MVTec AD
@@ -143,12 +143,12 @@ python build_bank_multilayer.py \
     --bank_path ./bank/mvtec_dinov3_vitb16_multilayer36911_448_bank.pth
 ```
 - `data_path` is the folder dir that stores the datasets.
-- `item_list` specifics the item classes of the datasets.
+- `item_list` specifies the item classes of the datasets.
 - `bank_path` is the folder dir that stores the bank.
-- `layer_idx_list`  specifics the layer index (zero-based) of the encoder we extract features. 
+- `layer_idx_list` specifies the layer index (zero-based) of the encoder we extract features. 
 
 
-Using RAD as a detecter.
+Using RAD as a detector.
 ```bash
 python rad_mvtec_visa_3dadam.py \
     --data_path ../mvtec_anomaly_detection \
@@ -162,10 +162,10 @@ python rad_mvtec_visa_3dadam.py \
     --max_ratio 0.01 \
     --vis_max 8 \
     --use_positional_bank \
-    --pos_radius 1
+    --pos_radius 1 \
     --item_list carpet grid leather tile wood \
                bottle cable capsule hazelnut metal_nut \
-               pill screw toothbrush transistor zipper \
+               pill screw toothbrush transistor zipper
 ```
 - `data_path` is the folder dir that stores the datasets.
 - `save_dir` specifies the directory where logs, metrics, and visualization results are saved.
@@ -175,7 +175,7 @@ python rad_mvtec_visa_3dadam.py \
 - `vis_max` limits the maximum number of test samples that will be visualized per class.
 - `use_positional_bank` enables the position-aware patch memory bank so that each patch only compares with patches from nearby spatial locations rather than all positions.
 - `pos_radius` controls the spatial neighborhood radius (in patch units) used for the position-aware patch memory bank around each query patch.
-- `item_list` specifics the item classes of the datasets.
+- `item_list` specifies the item classes of the datasets.
 
 ### VisA
 First build multi-layer anomaly-free memory bank.
@@ -194,12 +194,12 @@ python build_bank_multilayer.py \
     --bank_path ./bank/visa_dinov3_vitb16_multilayer36911_448_bank.pth
 ```
 - `data_path` is the folder dir that stores the datasets.
-- `item_list` specifics the item classes of the datasets.
+- `item_list` specifies the item classes of the datasets.
 - `bank_path` is the folder dir that stores the bank.
-- `layer_idx_list`  specifics the layer index (zero-based) of the encoder we extract features. 
+- `layer_idx_list` specifies the layer index (zero-based) of the encoder we extract features. 
 
 
-Using RAD as a detecter.
+Using RAD as a detector.
 ```bash
 python rad_mvtec_visa_3dadam.py \
     --data_path ../VisA_pytorch/1cls \
@@ -223,7 +223,7 @@ python rad_mvtec_visa_3dadam.py \
 - `vis_max` limits the maximum number of test samples that will be visualized per class.
 - `use_positional_bank` enables the position-aware patch memory bank so that each patch only compares with patches from nearby spatial locations rather than all positions.
 - `pos_radius` controls the spatial neighborhood radius (in patch units) used for the position-aware patch memory bank around each query patch.
-- `item_list` specifics the item classes of the datasets.
+- `item_list` specifies the item classes of the datasets.
 
 ### Real-IAD
 First build multi-layer anomaly-free memory bank.
@@ -239,10 +239,10 @@ python build_realiad_bank_multilayer.py \
 ```
 - `data_path` is the folder dir that stores the datasets.
 - `bank_path` is the folder dir that stores the bank.
-- `layer_idx_list`  specifics the layer index (zero-based) of the encoder we extract features. 
+- `layer_idx_list` specifies the layer index (zero-based) of the encoder we extract features. 
 
 
-Using RAD as a detecter.
+Using RAD as a detector.
 ```bash
 python rad_real_iad.py \
   --data_path ../Real-IAD \
@@ -272,10 +272,10 @@ First build multi-layer anomaly-free memory bank.
 ```bash
 python build_bank_multilayer.py \
     --data_path ../3D-ADAM \
---item_list 1m1 1m2 1m3 2m1 2m2h 2m2m \
-           3m1 3m2 3m2c 4m1 4m2 4m2c \
-           gripper_closed gripper_open helicalgear1 helicalgear2 \
-           rackgear spiralgear spurgear tapa2m1 tapa3m1 tapa4m1 tapatbb \
+    --item_list 1m1 1m2 1m3 2m1 2m2h 2m2m \
+               3m1 3m2 3m2c 4m1 4m2 4m2c \
+               gripper_closed gripper_open helicalgear1 helicalgear2 \
+               rackgear spiralgear spurgear tapa2m1 tapa3m1 tapa4m1 tapatbb \
     --encoder_name dinov3_vitb16 \
     --encoder_weight ../weights/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth \
     --image_size 512 \
@@ -286,12 +286,12 @@ python build_bank_multilayer.py \
     --bank_path ./bank/3dadam_dinov3_vitb16_multilayer36911_448_bank.pth
 ```
 - `data_path` is the folder dir that stores the datasets.
-- `item_list` specifics the item classes of the datasets.
+- `item_list` specifies the item classes of the datasets.
 - `bank_path` is the folder dir that stores the bank.
-- `layer_idx_list`  specifics the layer index (zero-based) of the encoder we extract features. 
+- `layer_idx_list` specifies the layer index (zero-based) of the encoder we extract features. 
 
 
-Using RAD as a detecter.
+Using RAD as a detector.
 ```bash
 python rad_mvtec_visa_3dadam.py \
     --data_path ../3D-ADAM \
@@ -315,7 +315,7 @@ python rad_mvtec_visa_3dadam.py \
 - `vis_max` limits the maximum number of test samples that will be visualized per class.
 - `use_positional_bank` enables the position-aware patch memory bank so that each patch only compares with patches from nearby spatial locations rather than all positions.
 - `pos_radius` controls the spatial neighborhood radius (in patch units) used for the position-aware patch memory bank around each query patch.
-- `item_list` specifics the item classes of the datasets.
+- `item_list` specifies the item classes of the datasets.
 
 ## 🙏 Acknowledgement
 
