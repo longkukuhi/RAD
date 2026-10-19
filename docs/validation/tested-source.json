@@ -1,6 +1,6 @@
 {
   "source_base": "59847f4f55082c31649d4e0a2dd0ec329b932633",
-  "test_count": 99,
+  "test_count": 108,
   "files": {
     "requirements.txt": "95abc04a958742776784afa85e0833457c24101f9de163352c2e021239ebb91b",
     "requirements-test.txt": "4163bb2f842cc0633fc3e4204d5b4bc873a18cb5c9b06b762718ce9cdd624b5d",
@@ -14,14 +14,14 @@
     "rad_cli.py": "0351186ede241635072a58f09bd97a329083c543a1dc25a11ba3e71ae33b3df3",
     "rad_evaluation.py": "326714038e500765ce71042823f72f45648e717a8acdca3f490daf61e8458afc",
     "rad_metrics.py": "6072a582f14fd293cfab83405fa4aeddda03a9fdea219c1612b18b66497e3131",
-    "rad_resources.py": "1cfbd22b176c3e87d0f59c5f702985bc02763ff0f17b5e68c0679a364e176796",
+    "rad_resources.py": "25d98ea8abbb3172acf0415a58dd43c10d99260c03fc92ba1ee6d86088422654",
     "rad_retrieval.py": "031c24f379cd02db5d59da8ed395b0d54db520a050e6ffa76b5b058b2fbd249e",
     "tests/benchmark_streaming.py": "57d9f8759c137c42fc7dd40534c5f6c695c73b29b6f4d218f02bcf198db8c163",
     "tests/test_rad_bank.py": "018a145343d4287f4119057c264b4a4f0bbd68867365ce0225aafe0ec92802ef",
     "tests/test_rad_cli.py": "08cbbb4c262cccb377e0277e3f6d247a03a37cbf3a81b0ebf0ff2fea871be6dc",
     "tests/test_rad_evaluation.py": "802011bf1ea36447b5e940bbb73f516774dbbf48dd73eefdb5cdec347590fb02",
     "tests/test_rad_metrics.py": "8731c977af9de804819f193e7cf3b210dfc268687a4880a6e23337396d240065",
-    "tests/test_rad_resources.py": "5dc738ca77dcde74cf7526f5ae19cfb3e71a0d3170e76ef7a1f89d07da897142",
+    "tests/test_rad_resources.py": "004f038d31a7fee8534ebc8d708771cb4f73aeacb8ad87954376cfe0890f8927",
     "tests/test_rad_retrieval.py": "adf0d93a74eecbb6a7df31aa9d8facc56d451cbad7c09ae2d07cd1b0c09fc030"
   }
 }

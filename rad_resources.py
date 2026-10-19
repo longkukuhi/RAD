@@ -1,7 +1,8 @@
 """Fail-closed, read-only resource admission and monitoring for RAD.
 
 Budgets are estimated TOTAL task peaks, not future allocations. Current process
-RSS/GPU residency is credited once when calculating the remaining allocation.
+RSS/exact GPU residency is credited once when calculating remaining allocation.
+Unattributed device-used GPU upper bounds never receive this credit.
 Workers must be included in the peak estimate; only the main process is credited,
 which is conservative. Swap occupancy is never used as evidence of paging.
 
@@ -57,6 +58,8 @@ class ResourceSnapshot:
     gpu_total_bytes: Optional[int] = None
     gpu_free_bytes: Optional[int] = None
     gpu_process_bytes: Optional[int] = None
+    gpu_process_measurement_kind: str = "exact"
+    gpu_process_source: Optional[str] = "injected_probe"
     gpu_shared_used_bytes: Optional[int] = None
     gpu_shared_verified: bool = False
     processes: list = field(default_factory=list)
@@ -164,6 +167,12 @@ def _windows_host():
 
 
 def _gpu_probe(device):
+    """Return dedicated capacity and exact own usage or a whole-device upper bound.
+
+    WSL/WDDM may omit a process or report its memory as N/A. Device total/free
+    remain independently checked; their difference bounds own residency but
+    also includes contexts and other processes. Missing process data is not zero.
+    """
     match = re.fullmatch(r'cuda(?::(\d+))?', str(device))
     if not match:
         raise ValueError('Only CPU and NVIDIA CUDA devices have a verified default resource probe')
@@ -180,16 +189,26 @@ def _gpu_probe(device):
     if len(row) != 1:
         raise ValueError('GPU query did not identify exactly one selected device')
     total, free = [int(v.strip()) * MIB for v in row[0].split(',')]
+    if total <= 0 or not 0 <= free <= total:
+        raise ValueError('GPU dedicated total/free counters are inconsistent')
     process_rows = _run(['nvidia-smi', '--id=' + physical,
                          '--query-compute-apps=pid,used_memory', '--format=csv,noheader,nounits'])
     own = 0
+    own_rows = 0
+    all_own_numeric = True
     for line in process_rows.splitlines():
         pid, amount = [v.strip() for v in line.split(',')]
         if int(pid) == os.getpid():
+            own_rows += 1
             if not amount.isdigit():
-                raise ValueError('Selected GPU does not expose current-process dedicated memory')
-            own += int(amount) * MIB
-    return total, free, own
+                all_own_numeric = False
+            else:
+                own += int(amount) * MIB
+    if own_rows and all_own_numeric:
+        if own > total:
+            raise ValueError('Current-process GPU residency exceeds device capacity')
+        return total, free, own, 'exact'
+    return total, free, total - free, 'device_used_upper_bound'
 
 
 class SystemProbe:
@@ -273,7 +292,15 @@ class SystemProbe:
         else:
             raise ValueError('Unsupported native OS; supply a verified ResourceSnapshot probe')
         if self.device != 'cpu':
-            snapshot.gpu_total_bytes, snapshot.gpu_free_bytes, snapshot.gpu_process_bytes = _gpu_probe(self.device)
+            (snapshot.gpu_total_bytes, snapshot.gpu_free_bytes,
+             snapshot.gpu_process_bytes, snapshot.gpu_process_measurement_kind) = _gpu_probe(self.device)
+            if snapshot.gpu_process_measurement_kind == 'exact':
+                snapshot.gpu_process_source = 'nvidia-smi selected-device compute-apps used_memory for all matching current-PID rows'
+            else:
+                snapshot.gpu_process_source = 'nvidia-smi selected-device memory.total - memory.free'
+                snapshot.diagnostics['gpu_process_limitation'] = (
+                    'Current-PID dedicated residency is unavailable; whole-device used memory is an upper bound '
+                    'including contexts and other processes. It is not attributed to this task or credited against remaining demand.')
             if snapshot.wsl and not snapshot.gpu_shared_verified:
                 snapshot.diagnostics['gpu_shared_limitation'] = 'Windows GPUAdapterMemory counters unavailable; nvidia-smi is not a substitute'
         return snapshot
@@ -320,8 +347,15 @@ class ResourceGuard:
         self._stopped = False
         self.peak_rss_bytes = 0
         self.peak_gpu_bytes = 0
+        self.peak_gpu_exact_bytes = None
+        self.peak_gpu_device_used_upper_bound_bytes = None
 
     def _receipt(self, status, evidence):
+        includes_upper_bound = self.peak_gpu_device_used_upper_bound_bytes is not None
+        gpu_peak_kind = ('device_used_upper_bound' if includes_upper_bound else
+                         'exact' if self.peak_gpu_exact_bytes is not None else 'not_measured')
+        gpu_peak_scope = ('selected device; includes contexts and other processes; not attributable to this task'
+                          if includes_upper_bound else 'current process' if self.peak_gpu_exact_bytes is not None else 'not measured')
         event = {'status':status, 'reason':'resource_pressure' if status == 'stopped' else None,
                  'timestamp_utc':time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                  'pid':os.getpid(), 'device':self.device,
@@ -329,6 +363,10 @@ class ResourceGuard:
                  'gpu_peak_budget_bytes':self.gpu_budget_bytes,
                  'observed_peak_rss_bytes':self.peak_rss_bytes,
                  'observed_peak_gpu_bytes':self.peak_gpu_bytes,
+                 'observed_peak_gpu_measurement_kind':gpu_peak_kind,
+                 'observed_peak_gpu_scope':gpu_peak_scope,
+                 'observed_peak_gpu_exact_process_bytes':self.peak_gpu_exact_bytes,
+                 'observed_peak_gpu_device_used_upper_bound_bytes':self.peak_gpu_device_used_upper_bound_bytes,
                  'resume_policy':'explicit_resume_after_resource_revalidation', **evidence}
         if self.log_path:
             self.log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -371,7 +409,6 @@ class ResourceGuard:
             if snapshot.cgroup_available_bytes is not None and snapshot.cgroup_limit_bytes is None:
                 raise ValueError('Cgroup availability lacks its effective limit')
             self.peak_rss_bytes = max(self.peak_rss_bytes, snapshot.process_rss_bytes)
-            self.peak_gpu_bytes = max(self.peak_gpu_bytes, snapshot.gpu_process_bytes or 0)
             return snapshot
         except ResourcePressureError:
             raise
@@ -406,11 +443,35 @@ class ResourceGuard:
                 self._stop('pagefile_actual_io_unverified', 'Windows pagefile I/O has neither verified exact counters nor a verified upper bound; provide a valid counter probe before running.', evidence)
         if self.device != 'cpu':
             vals = [snapshot.gpu_total_bytes, snapshot.gpu_free_bytes, snapshot.gpu_process_bytes]
-            if any(v is None or not math.isfinite(v) or v < 0 for v in vals) or snapshot.gpu_total_bytes <= 0 or snapshot.gpu_free_bytes > snapshot.gpu_total_bytes:
+            kind = snapshot.gpu_process_measurement_kind
+            if (any(v is None or not math.isfinite(v) or v < 0 for v in vals)
+                    or snapshot.gpu_total_bytes <= 0 or snapshot.gpu_free_bytes > snapshot.gpu_total_bytes
+                    or snapshot.gpu_process_bytes > snapshot.gpu_total_bytes
+                    or kind not in ('exact', 'device_used_upper_bound')
+                    or not isinstance(snapshot.gpu_process_source, str) or not snapshot.gpu_process_source.strip()):
                 self._stop('gpu_unverified', 'Dedicated GPU memory could not be verified.', evidence)
+            if kind == 'device_used_upper_bound' and snapshot.gpu_process_bytes != snapshot.gpu_total_bytes - snapshot.gpu_free_bytes:
+                self._stop('gpu_unverified', 'Device-used GPU upper bound does not match verified total minus free memory.', evidence)
+            self.peak_gpu_bytes = max(self.peak_gpu_bytes, snapshot.gpu_process_bytes)
+            if kind == 'exact':
+                self.peak_gpu_exact_bytes = max(self.peak_gpu_exact_bytes or 0, snapshot.gpu_process_bytes)
+                gpu_remaining = max(0, self.gpu_budget_bytes - snapshot.gpu_process_bytes)
+                gpu_scope = 'current process'
+            else:
+                self.peak_gpu_device_used_upper_bound_bytes = max(
+                    self.peak_gpu_device_used_upper_bound_bytes or 0, snapshot.gpu_process_bytes)
+                gpu_remaining = self.gpu_budget_bytes
+                gpu_scope = 'selected device; includes contexts and other processes; not attributable to this task'
+            evidence.update(remaining_gpu_budget_bytes=gpu_remaining,
+                            gpu_process_measurement_kind=kind, gpu_process_measurement_scope=gpu_scope)
             if snapshot.gpu_process_bytes > self.gpu_budget_bytes:
+                if kind == 'device_used_upper_bound':
+                    self._stop('gpu_budget_upper_bound_exceeded',
+                               'Whole-device dedicated GPU usage exceeds the task budget, so its own peak cannot be certified. '
+                               'This upper bound includes contexts and other processes; it does not establish that this task exceeded its budget. '
+                               'Preserve progress and verify process-level residency or wait for lower device occupancy.', evidence)
                 self._stop('gpu_budget_exceeded', 'Current-process dedicated GPU residency exceeds its peak budget.', evidence)
-            if snapshot.gpu_free_bytes < max(0, self.gpu_budget_bytes - snapshot.gpu_process_bytes):
+            if snapshot.gpu_free_bytes < gpu_remaining:
                 self._stop('insufficient_gpu', 'Dedicated GPU free memory cannot cover the remaining peak; shared system memory is not GPU capacity.', evidence)
             if snapshot.wsl and (not snapshot.gpu_shared_verified or snapshot.gpu_shared_used_bytes is None or not math.isfinite(snapshot.gpu_shared_used_bytes) or snapshot.gpu_shared_used_bytes < 0):
                 self._stop('gpu_shared_unverified', 'Windows shared GPU memory risk cannot be verified.', evidence)

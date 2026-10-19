@@ -56,11 +56,25 @@ Defaults:
   which process caused growth.
 
 `--ram-budget-gib` and `--gpu-budget-gib` mean **total conservative task peaks**,
-not additional memory to allocate. The guard credits current main-process
-residency once when calculating remaining demand. DataLoader workers belong in
+not additional memory to allocate. The guard credits current main-process RSS
+and exactly measured own GPU residency once when calculating remaining demand. DataLoader workers belong in
 the task estimate; only the main process is credited, so this calculation is
 conservative. Logged sampled RSS is main-process RSS, not a measurement of the
 whole worker tree or OS file cache.
+
+WSL/WDDM can report a matching process's dedicated GPU memory as `N/A`, or omit
+the process. The probe then uses independently verified device `total - free`
+as `device_used_upper_bound`; it never substitutes zero. This includes driver
+contexts and other processes, so **none of the upper bound is credited against
+remaining demand**: free dedicated VRAM must cover the full registered GPU
+budget. An upper bound above that budget also stops work conservatively because
+the task's own peak cannot be certified; this does not establish that RAD caused
+the device occupancy or exceeded its budget. Missing/invalid device capacity or
+measurement source still prevents admission. The JSONL receipt labels the
+combined GPU peak's measurement kind and scope and reports exact-process and
+device-upper-bound sampled peaks separately; a peak containing an upper bound
+is not a measured task-only peak. GPU identities/shared-memory counters still
+require independent verification on the target host.
 
 The default analytic estimate includes encoder parameters, checkpoint loading,
 float32 activations, an attention-matrix fallback, selected feature outputs,

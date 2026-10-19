@@ -2,6 +2,7 @@
 import argparse
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -68,6 +69,57 @@ class ResourceTests(unittest.TestCase):
         self.failure([host(0),host(1,host_pagefile_in_bytes=0)],'invalid_paging_window');self.failure([host(0),host(1,host_counter_time_seconds=0)],'invalid_paging_window')
     def test_gpu_current_residency_credited(self):
         g,_=self.guard([snap(i,gpu_total_bytes=16*GIB,gpu_free_bytes=2*GIB,gpu_process_bytes=6*GIB) for i in range(3)],device='cuda:0',gpu_budget_bytes=8*GIB);self.assertEqual(g.preflight()['status'],'admitted')
+    def test_gpu_upper_bound_requires_full_budget_free(self):
+        # Crediting the 10 GiB device upper bound would incorrectly admit this.
+        error=self.failure([snap(0,gpu_total_bytes=16*GIB,gpu_free_bytes=6*GIB,
+            gpu_process_bytes=10*GIB,gpu_process_measurement_kind='device_used_upper_bound',
+            gpu_process_source='verified device total minus free')],
+            'insufficient_gpu',device='cuda:0',gpu_budget_bytes=12*GIB)
+        self.assertEqual(error.evidence['remaining_gpu_budget_bytes'],12*GIB)
+    def test_gpu_upper_bound_budget_stop_is_not_process_attribution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'resources.jsonl'
+            error=self.failure([snap(0,gpu_total_bytes=16*GIB,gpu_free_bytes=6*GIB,
+                gpu_process_bytes=10*GIB,gpu_process_measurement_kind='device_used_upper_bound',
+                gpu_process_source='verified device total minus free')],
+                'gpu_budget_upper_bound_exceeded',device='cuda:0',gpu_budget_bytes=8*GIB,log_path=path)
+            self.assertIn('does not establish',str(error))
+            receipt=json.loads(path.read_text())
+            self.assertEqual(receipt['observed_peak_gpu_bytes'],10*GIB)
+            self.assertEqual(receipt['observed_peak_gpu_measurement_kind'],'device_used_upper_bound')
+            self.assertIn('other processes',receipt['observed_peak_gpu_scope'])
+            self.assertIsNone(receipt['observed_peak_gpu_exact_process_bytes'])
+            self.assertEqual(receipt['observed_peak_gpu_device_used_upper_bound_bytes'],10*GIB)
+    def test_gpu_exact_receipt_scope_and_remaining(self):
+        g,_=self.guard([snap(i,gpu_total_bytes=16*GIB,gpu_free_bytes=2*GIB,
+            gpu_process_bytes=6*GIB) for i in range(3)],device='cuda:0',gpu_budget_bytes=8*GIB)
+        receipt=g.preflight()
+        self.assertEqual(receipt['remaining_gpu_budget_bytes'],2*GIB)
+        self.assertEqual(receipt['observed_peak_gpu_measurement_kind'],'exact')
+        self.assertEqual(receipt['observed_peak_gpu_scope'],'current process')
+        self.assertEqual(receipt['observed_peak_gpu_exact_process_bytes'],6*GIB)
+        self.assertIsNone(receipt['observed_peak_gpu_device_used_upper_bound_bytes'])
+    def test_gpu_receipt_remembers_upper_bound_after_exact_sample(self):
+        samples=[snap(i,gpu_total_bytes=16*GIB,gpu_free_bytes=10*GIB,
+            gpu_process_bytes=6*GIB,gpu_process_measurement_kind='device_used_upper_bound')
+            for i in range(3)]
+        samples.append(snap(8,gpu_total_bytes=16*GIB,gpu_free_bytes=10*GIB,gpu_process_bytes=2*GIB))
+        g,c=self.guard(samples,device='cuda:0',gpu_budget_bytes=8*GIB)
+        self.assertEqual(g.preflight()['remaining_gpu_budget_bytes'],8*GIB)
+        c.now=8;receipt=g.check()
+        self.assertEqual(receipt['observed_peak_gpu_measurement_kind'],'device_used_upper_bound')
+        self.assertEqual(receipt['observed_peak_gpu_bytes'],6*GIB)
+        self.assertEqual(receipt['observed_peak_gpu_exact_process_bytes'],2*GIB)
+    def test_gpu_missing_kind_source_or_inconsistent_bound_fails_closed(self):
+        for changes in ({'gpu_process_measurement_kind':None},
+                        {'gpu_process_measurement_kind':'estimated'},
+                        {'gpu_process_source':None},{'gpu_process_source':' '},
+                        {'gpu_process_bytes':None},
+                        {'gpu_process_measurement_kind':'device_used_upper_bound'}):
+            with self.subTest(changes=changes):
+                values=dict(gpu_total_bytes=16*GIB,gpu_free_bytes=10*GIB,gpu_process_bytes=2*GIB)
+                values.update(changes)
+                self.failure([snap(0,**values)],'gpu_unverified',device='cuda:0',gpu_budget_bytes=8*GIB)
     def test_gpu_cannot_borrow_shared_memory(self):self.failure([snap(0,gpu_total_bytes=16*GIB,gpu_free_bytes=GIB,gpu_process_bytes=0)],'insufficient_gpu',device='cuda:0',gpu_budget_bytes=2*GIB)
     def test_wsl_gpu_shared_must_be_verified(self):self.failure([host(0,gpu_total_bytes=16*GIB,gpu_free_bytes=8*GIB,gpu_process_bytes=0)],'gpu_shared_unverified',device='cuda:0',gpu_budget_bytes=2*GIB)
     def test_existing_shared_ok_growth_stops(self):
@@ -165,6 +217,30 @@ class ResourceTests(unittest.TestCase):
         a=add_resource_arguments(argparse.ArgumentParser()).parse_args(['--ram-budget-gib','12','--gpu-budget-gib','3']);g=guard_from_args(a,GIB,2*GIB,device='cuda:0');self.assertEqual(g.ram_budget_bytes,12*GIB);self.assertEqual(g.gpu_budget_bytes,3*GIB)
     def test_cuda_visible_mapping(self):
         with patch.dict('os.environ',{'CUDA_VISIBLE_DEVICES':'GPU-a,GPU-b'}),patch('rad_resources._run',side_effect=['16000, 12000','']) as r:_gpu_probe('cuda:1');self.assertIn('--id=GPU-b',r.call_args_list[0].args[0])
+    def gpu_query(self,process_rows,total_free='16000, 12000'):
+        responses=[subprocess.CompletedProcess([],0,stdout=value,stderr='')
+                   for value in (total_free,process_rows)]
+        with patch.dict('os.environ',{'CUDA_VISIBLE_DEVICES':'0'}),\
+                patch('rad_resources.os.getpid',return_value=12345),\
+                patch('rad_resources.subprocess.run',side_effect=responses) as run:
+            result=_gpu_probe('cuda:0')
+            self.assertTrue(all(call.kwargs['check'] for call in run.call_args_list))
+            return result
+    def test_gpu_na_own_process_uses_verified_device_upper_bound(self):
+        for rows in ('12345, N/A','12345, [N/A]','12345, 50\n12345, N/A'):
+            with self.subTest(rows=rows):
+                self.assertEqual(self.gpu_query(rows),(16000*MIB,12000*MIB,4000*MIB,'device_used_upper_bound'))
+    def test_gpu_missing_process_is_not_zero_usage(self):
+        for rows in ('','54321, 100','54321, N/A'):
+            with self.subTest(rows=rows):
+                self.assertEqual(self.gpu_query(rows)[2:],(4000*MIB,'device_used_upper_bound'))
+    def test_gpu_all_own_numeric_rows_are_exact(self):
+        self.assertEqual(self.gpu_query('12345, 100\n54321, N/A\n12345, 25')[2:],(125*MIB,'exact'))
+        self.assertEqual(self.gpu_query('12345, 0')[2:],(0,'exact'))
+    def test_gpu_invalid_device_capacity_cannot_supply_upper_bound(self):
+        for capacity in ('N/A, 12000','16000, N/A','16000, 17000','0, 0','16000, -1','16000'):
+            with self.subTest(capacity=capacity),self.assertRaises(ValueError):
+                self.gpu_query('12345, N/A',capacity)
     def test_invalid_settings(self):
         for kw in ({'reserve_fraction':1},{'paging_grace_samples':1},{'interval_seconds':0},{'device':'cuda:0','gpu_budget_bytes':0},{'reserve_gib':float('nan')}):
             with self.subTest(kw=kw),self.assertRaises(ValueError):ResourceGuard(GIB,**kw)
