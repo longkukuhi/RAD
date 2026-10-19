@@ -1,0 +1,500 @@
+{
+  "validation_date": "2026-10-19",
+  "tested_implementation_revision": "76c15c6",
+  "bank_builder_revision": "6a7b090",
+  "original_evaluator_revision": "59847f4",
+  "source_manifest": "tested-source.json",
+  "runtime": {
+    "python": "3.12.3",
+    "torch": "2.8.0+cu128",
+    "torchvision": "0.23.0+cu128",
+    "cuda": "12.8",
+    "driver": "616.92",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "os": "Windows host / Ubuntu WSL2",
+    "environment_changes": false
+  },
+  "protocol": {
+    "category": "1m1",
+    "reference_count": 48,
+    "test_count": 56,
+    "normal_test_count": 16,
+    "anomalous_test_count": 40,
+    "seed": 1,
+    "batch_size": 2,
+    "num_workers": 0,
+    "encoder_name": "dinov3_vitb16",
+    "image_size": 512,
+    "crop_size": 448,
+    "layers": [
+      3,
+      6,
+      9,
+      11
+    ],
+    "k_image": 48,
+    "pos_radius": 1,
+    "use_positional_bank": true,
+    "resize_mask": 256,
+    "max_ratio": 0.01,
+    "layer_weights": null,
+    "vis_max": 0,
+    "feature_dtype": "float32"
+  },
+  "scope": "Full 1m1 category only: 48 normal references, all 56 test images; not a 23-category paper reproduction",
+  "baseline_limitations": [
+    "Both evaluators consume the same new version-2 reference features; this checks original versus revised evaluation, not an independently re-extracted original bank",
+    "Original evaluator retrieval, interpolation, smoothing, pooling and sklearn metric calls are unchanged. compute_pro resolves to the new utils implementation with the tested equivalent AUPRO formula, avoiding the original pandas API incompatibility. This is not reproduction of the complete old dependency environment."
+  ],
+  "cpu": {
+    "exit_code": 0,
+    "elapsed_seconds": 6.112199765979312,
+    "peak_process_rss_bytes": 799875072,
+    "source_hashes_verified": 22,
+    "top_level_tests": 130,
+    "subtests": 105,
+    "junit_total": 235,
+    "source_receipt_sha256": "13df30ca29c5ff6660c4001c1ab565cfcd8c01e96a2a7226203db08e1c036bef",
+    "source_receipt_format": "pytest JUnit XML; aggregate test count includes subtests"
+  },
+  "gpu_retrieval": {
+    "status": "passed",
+    "tolerance": {
+      "rtol": 1e-05,
+      "atol": 2e-06,
+      "changed_automatically": false
+    },
+    "precision_before": {
+      "torch": "2.8.0+cu128",
+      "torch_git_version": "a1cb3cc05d46d198467bebbb6e8fba50a325d4e7",
+      "torch_cuda": "12.8",
+      "cudnn_version": 91002,
+      "default_dtype": "torch.float32",
+      "float32_matmul_precision": "highest",
+      "cuda_matmul_allow_tf32": false,
+      "cudnn_allow_tf32": true,
+      "cudnn_benchmark": false,
+      "cudnn_deterministic": false,
+      "deterministic_algorithms": false,
+      "deterministic_warn_only": false,
+      "autocast_cuda_enabled": false,
+      "cpu_threads": 1,
+      "environment": {
+        "CUBLAS_WORKSPACE_CONFIG": null,
+        "NVIDIA_TF32_OVERRIDE": null,
+        "TORCH_ALLOW_TF32_CUBLAS_OVERRIDE": null
+      },
+      "policy": "Observed settings retained. No TF32/autocast/matmul/determinism override is applied."
+    },
+    "precision_after": {
+      "torch": "2.8.0+cu128",
+      "torch_git_version": "a1cb3cc05d46d198467bebbb6e8fba50a325d4e7",
+      "torch_cuda": "12.8",
+      "cudnn_version": 91002,
+      "default_dtype": "torch.float32",
+      "float32_matmul_precision": "highest",
+      "cuda_matmul_allow_tf32": false,
+      "cudnn_allow_tf32": true,
+      "cudnn_benchmark": false,
+      "cudnn_deterministic": false,
+      "deterministic_algorithms": false,
+      "deterministic_warn_only": false,
+      "autocast_cuda_enabled": false,
+      "cpu_threads": 1,
+      "environment": {
+        "CUBLAS_WORKSPACE_CONFIG": null,
+        "NVIDIA_TF32_OVERRIDE": null,
+        "TORCH_ALLOW_TF32_CUBLAS_OVERRIDE": null
+      },
+      "policy": "Observed settings retained. No TF32/autocast/matmul/determinism override is applied."
+    },
+    "observed_peaks": {
+      "process_peak_rss_bytes": 1556697088,
+      "guard_peak_rss_bytes": 1555263488,
+      "guard_peak_gpu_bytes": 1988100096,
+      "guard_peak_gpu_measurement_kind": "device_used_upper_bound",
+      "guard_peak_gpu_scope": "selected device; includes contexts and other processes; not attributable to this task",
+      "guard_peak_gpu_exact_process_bytes": null,
+      "guard_peak_gpu_device_used_upper_bound_bytes": 1988100096,
+      "cuda_max_memory_allocated_bytes": 18760704,
+      "cuda_max_memory_reserved_bytes": 29360128,
+      "cuda_allocator_peak_scope": "PyTorch allocator only; excludes CUDA context and other non-allocator allocations"
+    },
+    "case_count": 24,
+    "maximum_absolute_error": 1.1920928955078125e-07,
+    "all_cases_passed": true,
+    "tie_case_count": 3,
+    "all_tie_reference_sets_equal": true,
+    "source_receipt_sha256": "510f8763ba8a35868911e8104a5af0c3aa179f8e42bead44adde22951268d4b7",
+    "source_receipt_format": "JSON GPU comparison report"
+  },
+  "bank_build": {
+    "exit_code": 0,
+    "elapsed_seconds": 17.2652010259917,
+    "peak_process_rss_bytes": 1344249856,
+    "cuda_peak_allocated_bytes": 424394240,
+    "cuda_peak_reserved_bytes": 486539264,
+    "torch": "2.8.0+cu128",
+    "cuda": "12.8",
+    "tf32_matmul": false,
+    "tf32_cudnn": true,
+    "cudnn_deterministic": true
+  },
+  "evaluation": {
+    "exit_code": 0,
+    "elapsed_seconds": 29.16046800900949,
+    "peak_process_rss_bytes": 1958391808,
+    "cuda_peak_allocated_bytes": 435705856,
+    "cuda_peak_reserved_bytes": 488636416,
+    "torch": "2.8.0+cu128",
+    "cuda": "12.8",
+    "tf32_matmul": false,
+    "tf32_cudnn": true,
+    "cudnn_deterministic": true
+  },
+  "before_position_transfer_optimization": {
+    "exit_code": 0,
+    "elapsed_seconds": 87.62514392501907,
+    "peak_process_rss_bytes": 1964658688,
+    "cuda_peak_allocated_bytes": 435705856,
+    "cuda_peak_reserved_bytes": 488636416,
+    "torch": "2.8.0+cu128",
+    "cuda": "12.8",
+    "tf32_matmul": false,
+    "tf32_cudnn": true,
+    "cudnn_deterministic": true
+  },
+  "original_comparison": {
+    "status": "passed",
+    "names": [
+      "I-AUROC",
+      "I-AP",
+      "I-F1",
+      "P-AUROC",
+      "P-AP",
+      "P-F1",
+      "P-AUPRO"
+    ],
+    "original_values": [
+      0.5734375,
+      0.8114263035785745,
+      0.833333284722225,
+      0.9444085877081211,
+      0.33670151689713634,
+      0.42593321506282855,
+      0.8949227849681121
+    ],
+    "new_values": [
+      0.5734375,
+      0.8114263035785745,
+      0.833333284722225,
+      0.9444085867396962,
+      0.33670157956419094,
+      0.42593321506282855,
+      0.8949227680658249
+    ],
+    "absolute_errors": [
+      0.0,
+      0.0,
+      0.0,
+      9.684248958308217e-10,
+      6.266705460111766e-08,
+      0.0,
+      1.6902287125475368e-08
+    ],
+    "max_absolute_error": 6.266705460111766e-08,
+    "absolute_metric_tolerance": 1e-05,
+    "elapsed_seconds": 32.49732912000036,
+    "peak_main_process_rss_bytes": 2527023104,
+    "peak_torch_cuda_allocated_bytes": 1095482368,
+    "peak_torch_cuda_reserved_bytes": 1212153856,
+    "guard_gpu_device_used_upper_bound_peak_bytes": 3172990976,
+    "baseline_file_sha256": "8cc8323f82f61c3c877e75f50a9915ecee267124ba66bffe48856668f85df5fd",
+    "checkpoint_sha256": "73cec8be7427c8655ceced13ce62f6e20a1fa90d1b4d4a550df17a1144081a7c",
+    "bank_manifest_sha256": "883b16bc4d9437c67726fda47652738e130604bc919c509845a8d8e0ae19f079",
+    "current_utils_sha256": "5664a0f767f4e475536b7cd45ca12374a54ad6e0a85a2a23a3f6a115a98b3ff4"
+  },
+  "completed_run_resume": {
+    "exit_code": 0,
+    "elapsed_seconds": 5.087734451983124,
+    "peak_process_rss_bytes": 642379776,
+    "cuda_initialized": false,
+    "metric_values_unchanged": true,
+    "remaining_spool_files": [
+      ".metric.lock"
+    ]
+  },
+  "large_bank": {
+    "synthetic": true,
+    "no_encoder_loaded": true,
+    "n_reference_images": 65536,
+    "layers": 2,
+    "patches": 196,
+    "channels": 64,
+    "dtype": "float32",
+    "bank_bytes": 6613676500,
+    "build_seconds": 72.22474382101791,
+    "retrieval_seconds": 0.5361685609677806,
+    "peak_process_rss_bytes": 521740288,
+    "platform": "linux",
+    "ram_budget_bytes": 1073741824,
+    "retrieval_config": {
+      "reference_chunk_size": 4,
+      "query_patch_chunk_size": 16,
+      "cls_chunk_size": 256,
+      "workspace_mib": 16,
+      "max_score_mib": 16
+    },
+    "query_batch": 4,
+    "k_image": 32,
+    "actual_reference_rows_read_across_layers": 64,
+    "without_batch_reuse_rows": 256,
+    "peak_reference_rows_per_read": 4,
+    "scores_finite": true,
+    "score_shape": [
+      4,
+      196
+    ],
+    "scope": "CPU synthetic storage/retrieval benchmark; no GPU or real dataset throughput claim"
+  },
+  "cleanup": {
+    "source_hashes_verified": true,
+    "verified_file_count": 22,
+    "queue_lock_available": true,
+    "all_recorded_launchers_released_lock": true,
+    "metric_published": true,
+    "spool_files_after_cleanup": [
+      ".metric.lock"
+    ],
+    "synthetic_temporary_banks_remaining": []
+  },
+  "earlier_stops": [
+    {
+      "revision": "7df77a6",
+      "reason": "WSL process VRAM N/A; probe_failed before comparison cases"
+    },
+    {
+      "revision": "2fae985",
+      "reason": "Fixed 64 MiB shared growth check stopped CUDA initialization before comparison cases"
+    },
+    {
+      "revision": "76c15c6",
+      "component": "external launcher, not repository",
+      "reason": "Version-label replacement changed encoder name to nonexistent dinov4; rejected before model loading; corrected launcher and new output path used"
+    }
+  ],
+  "resources": {
+    "bank_build": {
+      "source_receipt_sha256": "2788dab0cc9135e77ba241743873de2b9deeeea77cb547e3498ba9053e9bebbf",
+      "events": 4,
+      "stop_codes": [],
+      "sampled_rss_peak_bytes": 790626304,
+      "sampled_device_used_upper_bound_bytes": 2214592512,
+      "sampled_selected_adapter_shared_total_peak_bytes": 130744320,
+      "sampled_rss_plus_shared_upper_bound_bytes": 921370624,
+      "minimum_linux_available_bytes": 151315869696,
+      "minimum_windows_available_bytes": 91250597888,
+      "linux_or_local": {
+        "valid_windows": 3,
+        "measurement_kind": "exact",
+        "max_combined_io_bytes_per_second": 0.0,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "windows_host": {
+        "valid_windows": 3,
+        "measurement_kind": "upper_bound",
+        "max_combined_io_bytes_per_second": 5324.934774040536,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "linux_swap_counter_endpoint_deltas": {
+        "swap_in_bytes": 0,
+        "swap_out_bytes": 0
+      },
+      "linux_psi_average_nonzero_observed": false
+    },
+    "gpu_retrieval_v4": {
+      "source_receipt_sha256": "c9be9bac8ec884548dea9a60914547f268258822c32361354140d7e46ef1e378",
+      "events": 63,
+      "stop_codes": [],
+      "sampled_rss_peak_bytes": 1555263488,
+      "sampled_device_used_upper_bound_bytes": 1988100096,
+      "sampled_selected_adapter_shared_total_peak_bytes": 143450112,
+      "sampled_rss_plus_shared_upper_bound_bytes": 1698713600,
+      "minimum_linux_available_bytes": 150536593408,
+      "minimum_windows_available_bytes": 90108067840,
+      "linux_or_local": {
+        "valid_windows": 32,
+        "measurement_kind": "exact",
+        "max_combined_io_bytes_per_second": 0.0,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "windows_host": {
+        "valid_windows": 32,
+        "measurement_kind": "upper_bound",
+        "max_combined_io_bytes_per_second": 60859.03074135007,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "linux_swap_counter_endpoint_deltas": {
+        "swap_in_bytes": 0,
+        "swap_out_bytes": 0
+      },
+      "linux_psi_average_nonzero_observed": false
+    },
+    "real_evaluation_v4": {
+      "source_receipt_sha256": "93ebe515c76262c3054968cd47a763774d63e038356dc46fd0a1537f46353aaa",
+      "events": 7,
+      "stop_codes": [],
+      "sampled_rss_peak_bytes": 1911529472,
+      "sampled_device_used_upper_bound_bytes": 2449473536,
+      "sampled_selected_adapter_shared_total_peak_bytes": 143474688,
+      "sampled_rss_plus_shared_upper_bound_bytes": 2055004160,
+      "minimum_linux_available_bytes": 150294310912,
+      "minimum_windows_available_bytes": 90080202752,
+      "linux_or_local": {
+        "valid_windows": 6,
+        "measurement_kind": "exact",
+        "max_combined_io_bytes_per_second": 0.0,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "windows_host": {
+        "valid_windows": 6,
+        "measurement_kind": "upper_bound",
+        "max_combined_io_bytes_per_second": 7203.94908671931,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "linux_swap_counter_endpoint_deltas": {
+        "swap_in_bytes": 0,
+        "swap_out_bytes": 0
+      },
+      "linux_psi_average_nonzero_observed": false
+    },
+    "original_comparison_v4": {
+      "source_receipt_sha256": "b41b3a776a51be4127ef6d01fc1a85e0cd849cb9208c9f2a13f84106afc81363",
+      "events": 10,
+      "stop_codes": [],
+      "sampled_rss_peak_bytes": 2295984128,
+      "sampled_device_used_upper_bound_bytes": 3172990976,
+      "sampled_selected_adapter_shared_total_peak_bytes": 143474688,
+      "sampled_rss_plus_shared_upper_bound_bytes": 2439327744,
+      "minimum_linux_available_bytes": 149965209600,
+      "minimum_windows_available_bytes": 89452052480,
+      "linux_or_local": {
+        "valid_windows": 7,
+        "measurement_kind": "exact",
+        "max_combined_io_bytes_per_second": 0.0,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "windows_host": {
+        "valid_windows": 7,
+        "measurement_kind": "upper_bound",
+        "max_combined_io_bytes_per_second": 6055.833050982702,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "linux_swap_counter_endpoint_deltas": {
+        "swap_in_bytes": 0,
+        "swap_out_bytes": 0
+      },
+      "linux_psi_average_nonzero_observed": false
+    },
+    "completed_run_resume": {
+      "source_receipt_sha256": "93ebe515c76262c3054968cd47a763774d63e038356dc46fd0a1537f46353aaa",
+      "events": 2,
+      "stop_codes": [],
+      "sampled_rss_peak_bytes": 641974272,
+      "sampled_device_used_upper_bound_bytes": null,
+      "sampled_selected_adapter_shared_total_peak_bytes": null,
+      "sampled_rss_plus_shared_upper_bound_bytes": null,
+      "minimum_linux_available_bytes": 151447683072,
+      "minimum_windows_available_bytes": 91059544064,
+      "linux_or_local": {
+        "valid_windows": 1,
+        "measurement_kind": "exact",
+        "max_combined_io_bytes_per_second": 0.0,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "windows_host": {
+        "valid_windows": 1,
+        "measurement_kind": "upper_bound",
+        "max_combined_io_bytes_per_second": 11611.410648545465,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "linux_swap_counter_endpoint_deltas": {
+        "swap_in_bytes": 0,
+        "swap_out_bytes": 0
+      },
+      "linux_psi_average_nonzero_observed": false,
+      "gpu_measurement_status": "not_measured_cpu_task"
+    },
+    "large_bank_v4": {
+      "source_receipt_sha256": "9bf45589ca83f66d8620d067638672b53519578f3a877ad37d277e12a2c868af",
+      "events": 16,
+      "stop_codes": [],
+      "sampled_rss_peak_bytes": 521740288,
+      "sampled_device_used_upper_bound_bytes": null,
+      "sampled_selected_adapter_shared_total_peak_bytes": null,
+      "sampled_rss_plus_shared_upper_bound_bytes": null,
+      "minimum_linux_available_bytes": 151486488576,
+      "minimum_windows_available_bytes": 84441321472,
+      "linux_or_local": {
+        "valid_windows": 16,
+        "measurement_kind": "exact",
+        "max_combined_io_bytes_per_second": 0.0,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "windows_host": {
+        "valid_windows": 16,
+        "measurement_kind": "upper_bound",
+        "max_combined_io_bytes_per_second": 17257.105675683564,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "linux_swap_counter_endpoint_deltas": {
+        "swap_in_bytes": 0,
+        "swap_out_bytes": 0
+      },
+      "linux_psi_average_nonzero_observed": false,
+      "gpu_measurement_status": "not_measured_cpu_task"
+    },
+    "earlier_gpu_v3": {
+      "source_receipt_sha256": "da80118b9210111f569368ac49c5f75ff62f69d59d328688a0551677c66d81fc",
+      "events": 63,
+      "stop_codes": [],
+      "sampled_rss_peak_bytes": 1562849280,
+      "sampled_device_used_upper_bound_bytes": 1988100096,
+      "sampled_selected_adapter_shared_total_peak_bytes": 143327232,
+      "sampled_rss_plus_shared_upper_bound_bytes": 1706176512,
+      "minimum_linux_available_bytes": 150552293376,
+      "minimum_windows_available_bytes": 91355037696,
+      "linux_or_local": {
+        "valid_windows": 33,
+        "measurement_kind": "exact",
+        "max_combined_io_bytes_per_second": 0.0,
+        "windows_at_or_above_1_mib_s": 0,
+        "maximum_consecutive_active_windows": 0
+      },
+      "windows_host": {
+        "valid_windows": 33,
+        "measurement_kind": "upper_bound",
+        "max_combined_io_bytes_per_second": 4572329.493967007,
+        "windows_at_or_above_1_mib_s": 1,
+        "maximum_consecutive_active_windows": 1
+      },
+      "linux_swap_counter_endpoint_deltas": {
+        "swap_in_bytes": 0,
+        "swap_out_bytes": 0
+      },
+      "linux_psi_average_nonzero_observed": false
+    }
+  }
+}

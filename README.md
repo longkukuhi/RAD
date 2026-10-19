@@ -30,7 +30,7 @@ RAD performs multi-class image anomaly detection and localization with a frozen 
 
 ## Setup
 
-Run the commands from the repository root. Paths beginning with `../` refer to its parent directory. The CPU regression environment uses **Python 3.12**, **PyTorch 2.7.0**, and **torchvision 0.22.0**, with the dependency versions in [requirements.txt](requirements.txt). See [validation](docs/VALIDATION.md) for what was checked and the remaining full-dataset/CUDA checks.
+Run the commands from the repository root. Paths beginning with `../` refer to its parent directory. The CPU regression environment uses **Python 3.12**, **PyTorch 2.7.0**, and **torchvision 0.22.0**, with the dependency versions in [requirements.txt](requirements.txt). See [validation](docs/VALIDATION.md) for the initial CPU checks and [ROG validation](docs/ROG_VALIDATION.md) for the WSL/RTX 5090 follow-up. Full-dataset reproduction remains separate.
 
 ```bash
 git clone https://github.com/longkukuhi/RAD.git
@@ -338,7 +338,7 @@ The bank records the encoder/checkpoint SHA-256, preprocessing, category order, 
 
 Reference indices map to the bank's saved paths. Training images are needed for retrieved-neighbor visualizations and are checked against their fingerprints. With `--vis_max 0`, evaluation does not rebuild a training `ImageFolder` or require reference images just to load the saved features. Test data and the checkpoint remain required for provenance checks, including recovery.
 
-All four entry points use **seed 1** and expose no `--seed` option. The recipes schedule no additional seeds. Feature extraction and retrieval retain float32 precision, all normal references, all selected layers, the 512-to-448 preprocessing, and the original dataset-specific settings. Resource tuning must not silently change these scientific choices. CPU synthetic equivalence checks do not establish bitwise equality across different GPU kernels or hardware; see [validation](docs/VALIDATION.md).
+All four entry points use **seed 1** and expose no `--seed` option. The recipes schedule no additional seeds. Feature extraction and retrieval retain float32 precision, all normal references, all selected layers, the 512-to-448 preprocessing, and the original dataset-specific settings. Resource tuning must not silently change these scientific choices. The numerical checks do not establish bitwise equality across different GPU kernels or hardware; see [validation](docs/VALIDATION.md) and the [target-host comparison](docs/ROG_VALIDATION.md).
 
 ## Outputs
 
@@ -381,9 +381,11 @@ Legacy `.pt`/`.pth` banks are not loaded automatically. Rebuilding a version-2 b
 
 ## Validation and compatibility
 
-The active metric implementation no longer depends on pandas `DataFrame._append`; the previous pandas/AUPRO mismatch has been removed. Dependency pins now target the Python 3.12 CPU regression environment described above. The bank, bounded retrieval, metric and recovery checks use small synthetic data and do not download a model or start a benchmark.
+The active metric implementation no longer depends on pandas `DataFrame._append`; the previous pandas/AUPRO mismatch has been removed. Dependency pins now target the Python 3.12 CPU regression environment described above. The CPU regression tests use small synthetic data and do not download a model. The separate resource-admitted target-host validation uses existing weights and real images.
 
-See [validation evidence and limitations](docs/VALIDATION.md) for the exact checked revision, commands and results. A full DINOv3 dataset run, target-host CUDA behavior and measured experiment memory require their own resource-admitted validation; the synthetic checks are not reported as reproduction of the paper's benchmark scores.
+See [initial CPU validation](docs/VALIDATION.md) and [WSL/RTX 5090 validation](docs/ROG_VALIDATION.md) for checked revisions, commands, memory measurements and limitations. The target-host checks use real DINOv3 weights and the complete 1m1 category (48 normal references and 56 test images), plus CUDA and large synthetic-bank checks. This limited scope does not reproduce the paper's full multi-category benchmarks; larger runs still require their own resource admission.
+
+On the tested host, the final implementation passed 130 regression tests plus 105 subtests and 24 CUDA comparison cases; all seven real-category metrics agreed with the original evaluator within `6.3e-8`. A 6.159 GiB synthetic bank completed under a 1 GiB process RAM budget with 497.57 MiB peak RSS; OS caches are separate.
 
 ## Acknowledgments
 

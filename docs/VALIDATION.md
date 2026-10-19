@@ -7,14 +7,15 @@ Validation date: 2026-10-19. Source base:
 The tested source files and their SHA-256 values are recorded in
 [validation/tested-source.json](validation/tested-source.json).
 
-This revision was checked in an isolated local checkout. No real dataset
-experiment, pretrained encoder load, GPU inference, extra scientific seed or
-server deployment was performed. Existing experiment checkouts and results were
-left untouched.
+The initial local checks below tested revision `7df77a6` in an isolated checkout,
+without loading a pretrained encoder or running CUDA. Subsequent resource-admitted
+WSL/RTX 5090 validation, including a complete real-data category and additional
+fixes, is documented in [ROG_VALIDATION.md](ROG_VALIDATION.md). Existing experiment
+checkouts and results were left untouched; all technical checks use seed 1.
 
 ## Functional checks
 
-**99 tests passed** in the final CPU run, using Python 3.12.14, torch 2.7.0,
+**99 tests passed** in the initial local CPU run, using Python 3.12.14, torch 2.7.0,
 torchvision 0.22.0, NumPy 2.2.6, SciPy 1.16.3, scikit-learn 1.6.1 and
 scikit-image 0.25.2 on macOS 27.0.1 arm64. The full test process reached
 394.09 MiB peak RSS (`resource.getrusage`, not a sample), under its 1 GiB
@@ -118,16 +119,18 @@ inventories and local directory names.
 
 ## Remaining validation boundaries
 
-- Full real-data/CUDA equivalence and throughput are unmeasured. Tiled kernels
-  can change final-bit rounding and near-tie ordering. No paper benchmark score
-  or universal peak/speed guarantee is claimed.
+- Full-dataset equivalence and throughput remain unmeasured. The follow-up
+  [ROG report](ROG_VALIDATION.md) covers CUDA fixtures and one complete real-data
+  category. Tiled kernels can change final-bit rounding and near-tie ordering;
+  no paper benchmark score or universal peak/speed guarantee is claimed.
 - Resource budgets are estimates and sampled safeguards, not OS-enforced
   allocation caps. A single kernel/allocation or a concurrent job can change
   pressure between checkpoints. Conservative headroom remains necessary.
-- A read-only target-host probe found zero Linux swap deltas, but one elevated
+- An initial read-only target-host probe found zero Linux swap deltas, but one elevated
   Windows disk-paging upper-bound interval. That neither proves actual pagefile
   activity nor establishes sustained paging. Host pagefile/shared-GPU evidence
-  was insufficient to admit a real GPU run, so none was started.
+  was insufficient to admit a real GPU run at that stage. Subsequent target-host
+  diagnosis, fixes and admitted runs are recorded separately in the ROG report.
 - Original RAD code now has the requested strict noncommercial terms, including
   academic commercial collaborations. Upstream rights remain separate. The
   attribution gaps documented in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
