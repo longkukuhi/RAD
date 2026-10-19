@@ -1,0 +1,31 @@
+[
+  {
+    "script": "build_bank_multilayer.py",
+    "exit_code": 0,
+    "has_usage": true
+  },
+  {
+    "script": "build_realiad_bank_multilayer.py",
+    "exit_code": 0,
+    "has_usage": true
+  },
+  {
+    "script": "rad_mvtec_visa_3dadam.py",
+    "exit_code": 0,
+    "has_usage": true
+  },
+  {
+    "script": "rad_real_iad.py",
+    "exit_code": 0,
+    "has_usage": true
+  },
+  {
+    "script": "rad_bank.py",
+    "exit_code": 0,
+    "has_usage": true
+  },
+  {
+    "pip_check": "No broken requirements found.",
+    "exit_code": 0
+  }
+]

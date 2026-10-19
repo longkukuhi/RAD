@@ -1,0 +1,64 @@
+{
+  "synthetic": true,
+  "no_encoder_loaded": true,
+  "n_reference_images": 128,
+  "layers": 2,
+  "patches": 196,
+  "channels": 64,
+  "dtype": "float32",
+  "bank_bytes": 12918798,
+  "build_seconds": 0.03586120798718184,
+  "retrieval_seconds": 0.16403616697061807,
+  "peak_process_rss_bytes": 203309056,
+  "platform": "darwin",
+  "ram_budget_bytes": 1073741824,
+  "retrieval_config": {
+    "reference_chunk_size": 4,
+    "query_patch_chunk_size": 16,
+    "cls_chunk_size": 256,
+    "workspace_mib": 16,
+    "max_score_mib": 16
+  },
+  "query_batch": 4,
+  "k_image": 32,
+  "actual_reference_rows_read_across_layers": 64,
+  "without_batch_reuse_rows": 256,
+  "peak_reference_rows_per_read": 4,
+  "scores_finite": true,
+  "score_shape": [
+    4,
+    196
+  ],
+  "scope": "CPU synthetic storage/retrieval benchmark; no GPU or real dataset throughput claim",
+  "resource_observations": [
+    {
+      "status": "admitted",
+      "paging": {
+        "linux_or_local": {
+          "measurement_kind": "exact",
+          "elapsed_seconds": 1.07854179199785,
+          "in_bytes_per_second": 0.0,
+          "out_bytes_per_second": 0.0,
+          "consecutive_active_windows": 0
+        }
+      },
+      "available_ram_bytes": 66900705280
+    },
+    {
+      "status": "checked",
+      "paging": {
+        "measurement_status": "deferred",
+        "reason": "minimum_paging_window_not_reached",
+        "minimum_window_seconds": 1.0,
+        "elapsed_seconds_by_domain": {
+          "linux_or_local": 0.19955641601700336
+        },
+        "retained_consecutive_active_windows": {
+          "linux_or_local": 0,
+          "windows_host": 0
+        }
+      },
+      "available_ram_bytes": 66882387968
+    }
+  ]
+}

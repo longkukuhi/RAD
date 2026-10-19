@@ -1,0 +1,81 @@
+RAD Strict Noncommercial License 1.0
+SPDX-License-Identifier: LicenseRef-RAD-Strict-Noncommercial-1.0
+
+Copyright (c) the respective copyright holders of the original RAD code.
+
+1. Scope
+
+These terms apply only to original RAD material for which the copyright holders
+have authority to grant this license, including original RAD modifications.
+They do not replace or restrict licenses granted by third-party copyright
+holders. Third-party code, pretrained weights, datasets, and other separately
+licensed material remain subject to their own terms. See THIRD_PARTY_NOTICES.md.
+
+2. Noncommercial permission
+
+Subject to these terms, the copyright holders permit you, without a license fee,
+to use, copy, study, modify, and distribute the covered material solely for
+noncommercial purposes. Permitted purposes include independent noncommercial
+research, teaching, personal study, and reproducibility work that are not part
+of, directed toward, or undertaken in anticipation of a commercial application.
+
+3. Commercial use is not permitted
+
+No permission is granted under this license for a use primarily intended for
+or directed toward commercial advantage, monetary compensation, or the
+development or operation of a commercial activity. This includes, without
+limitation:
+
+  a. incorporating the covered material into commercial products, services,
+     platforms, subscriptions, or other monetized offerings, whether the
+     covered material itself is separately charged for or provided free;
+  b. using the covered material for internal business operations, commercial
+     product development, commercial evaluation, consulting, or paid services;
+  c. research, development, or other work commissioned by, sponsored by, or
+     conducted in cooperation with a commercial entity for a commercial
+     objective, including anticipated commercialization or technology transfer;
+  d. selling the covered material or granting others rights to use it for any
+     commercial purpose.
+
+These restrictions apply regardless of whether the user is an individual,
+company, university, research institute, nonprofit, charity, or government
+entity. Institutional status does not create an exception. In particular,
+university or research-institute participation does not make commercial
+collaboration permissible. Publication of results does not by itself make a
+commercially directed activity noncommercial.
+
+Ordinary academic employment and dissemination through scholarly publications
+do not, by themselves, make otherwise independent noncommercial research a
+commercial activity. However, this clarification does not permit any activity
+described in (a) through (d).
+
+Commercial use requires a separate, express, prior written authorization from
+the relevant copyright holders. No such authorization is granted by this file.
+
+4. Copies and modifications
+
+Every permitted distribution must retain this license, applicable copyright
+notices, and third-party notices. Modified versions must clearly identify that
+they have been modified and must not imply endorsement by the original authors.
+You may not offer the covered material under terms that grant commercial rights
+or remove the noncommercial restrictions in this license. These conditions do
+not alter recipients' independent rights in third-party material.
+
+5. Reserved rights and termination
+
+Rights not expressly granted are reserved. This license grants no trademark
+rights and no patent license. It does not limit rights that cannot lawfully be
+limited, including applicable statutory exceptions. The permissions granted
+here terminate automatically if you breach these terms. Continuing or resuming
+use after termination requires authorization from the relevant rights holders.
+
+6. No warranty or liability
+
+TO THE EXTENT PERMITTED BY APPLICABLE LAW, THE COVERED MATERIAL IS PROVIDED
+"AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+THE COPYRIGHT HOLDERS AND CONTRIBUTORS SHALL NOT BE LIABLE FOR ANY CLAIM,
+DAMAGES, OR OTHER LIABILITY ARISING FROM THE MATERIAL OR ITS USE.
+
+This is a source-available, noncommercial license. It is not an OSI-approved
+open-source license.

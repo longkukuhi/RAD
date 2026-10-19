@@ -1,0 +1,3 @@
+# Preserve the exact upstream bytes recorded in licenses/SOURCES.json.
+licenses/* -text
+licenses/BEiT-UNILM-MIT.txt whitespace=cr-at-eol

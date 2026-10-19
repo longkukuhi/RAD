@@ -1,0 +1,117 @@
+{
+  "retrieved_on": "2026-10-19",
+  "note": "License-document retrieval commits only; historical vendoring commits are not established. Files are unmodified upstream bytes.",
+  "files": [
+    {
+      "file": "licenses/DINO-APACHE-2.0.txt",
+      "repository": "facebookresearch/dino",
+      "commit": "7c446df5b9f45747937fb0d72314eb9f7b66930a",
+      "upstream_path": "LICENSE",
+      "url": "https://github.com/facebookresearch/dino/blob/7c446df5b9f45747937fb0d72314eb9f7b66930a/LICENSE",
+      "sha256": "50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a",
+      "bytes": 11324,
+      "upstream_blob_sha": "b09cd7856d58590578ee1a4f3ad45d1310a97f87",
+      "vendored_source_commit": "unknown"
+    },
+    {
+      "file": "licenses/DINOv2-APACHE-2.0.txt",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+      "upstream_path": "LICENSE",
+      "url": "https://github.com/facebookresearch/dinov2/blob/7764ea0f912e53c92e82eb78a2a1631e92725fc8/LICENSE",
+      "sha256": "600cc67cc4cb2f5ea317dcfc687ad1c74dc4bec8782bbe9db0afd83513b935b7",
+      "bytes": 11359,
+      "upstream_blob_sha": "5471dc10377b76db85a2feca7a99a7eef4980ba8",
+      "vendored_source_commit": "unknown"
+    },
+    {
+      "file": "licenses/DINOv3-LICENSE.md",
+      "repository": "facebookresearch/dinov3",
+      "commit": "6876159a11b4df116f30f667f8c9888617df0751",
+      "upstream_path": "LICENSE.md",
+      "url": "https://github.com/facebookresearch/dinov3/blob/6876159a11b4df116f30f667f8c9888617df0751/LICENSE.md",
+      "sha256": "25d122eb8f5b880fd23c736fb6ea8018ee45c12237e00b8a86d14c653904999e",
+      "bytes": 7503,
+      "upstream_blob_sha": "f531b1e6b5ab2318957bbf8ad1bda9f800a23e17",
+      "vendored_source_commit": "unknown"
+    },
+    {
+      "file": "licenses/BEiT-UNILM-MIT.txt",
+      "repository": "microsoft/unilm",
+      "commit": "31c5b904ca1bf2afb4c234a6675c683a4e5fc7cd",
+      "upstream_path": "LICENSE",
+      "url": "https://github.com/microsoft/unilm/blob/31c5b904ca1bf2afb4c234a6675c683a4e5fc7cd/LICENSE",
+      "sha256": "904dc4d8749877f1dba1cda48200d2462dccbeb7c134d5e4ef6fa75e0198c8fe",
+      "bytes": 1104,
+      "upstream_blob_sha": "ae241a567f3de21656c00c7b341a6f8701e405b3",
+      "vendored_source_commit": "unknown"
+    },
+    {
+      "file": "licenses/UNILM-NOTICE.md",
+      "repository": "microsoft/unilm",
+      "commit": "31c5b904ca1bf2afb4c234a6675c683a4e5fc7cd",
+      "upstream_path": "NOTICE.md",
+      "url": "https://github.com/microsoft/unilm/blob/31c5b904ca1bf2afb4c234a6675c683a4e5fc7cd/NOTICE.md",
+      "sha256": "356d6916736c03fd62144efb01bc045e69b9d41875a09f04f30ca571951c9459",
+      "bytes": 12138,
+      "upstream_blob_sha": "c74cb718bf574f64aa4f4af1804a25eafeece3d6",
+      "vendored_source_commit": "unknown"
+    },
+    {
+      "file": "licenses/TIMM-APACHE-2.0.txt",
+      "repository": "huggingface/pytorch-image-models",
+      "commit": "29fda20e6d428bf636090ab207bbcf60617570ca",
+      "upstream_path": "LICENSE",
+      "url": "https://github.com/huggingface/pytorch-image-models/blob/29fda20e6d428bf636090ab207bbcf60617570ca/LICENSE",
+      "sha256": "71b111620fa32c17a80ccd6db2da759d31a591e497d8b5f382174f59d1b59d49",
+      "bytes": 11343,
+      "upstream_blob_sha": "4336819097f8777b9ca64ebe49bc0bc77ae3c5f5",
+      "vendored_source_commit": "unknown",
+      "selection_reason": "Commit explicitly cited by models/vit_encoder.py download_cached_file docstring; exact local modification history remains unverified."
+    },
+    {
+      "file": "licenses/DeiT-APACHE-2.0.txt",
+      "repository": "facebookresearch/deit",
+      "commit": "7e160fe43f0252d17191b71cbb5826254114ea5b",
+      "upstream_path": "LICENSE",
+      "url": "https://github.com/facebookresearch/deit/blob/7e160fe43f0252d17191b71cbb5826254114ea5b/LICENSE",
+      "sha256": "b208c52b00a2df2c8f4c3298c34407bf2bfe409968213372251c91fcc737a1a5",
+      "bytes": 11354,
+      "upstream_blob_sha": "b1395e94b016dd1b95b4c7e3ed493e1d0b342917",
+      "vendored_source_commit": "unknown"
+    },
+    {
+      "file": "licenses/VisA-SPOT-DIFF-APACHE-2.0.txt",
+      "repository": "amazon-science/spot-diff",
+      "commit": "2a692ab575001cbde74d402d897a7286086c6199",
+      "upstream_path": "LICENSE",
+      "url": "https://github.com/amazon-science/spot-diff/blob/2a692ab575001cbde74d402d897a7286086c6199/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358,
+      "upstream_blob_sha": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+      "vendored_source_commit": "unknown"
+    },
+    {
+      "file": "licenses/VisA-SPOT-DIFF-NOTICE.txt",
+      "repository": "amazon-science/spot-diff",
+      "commit": "2a692ab575001cbde74d402d897a7286086c6199",
+      "upstream_path": "NOTICE",
+      "url": "https://github.com/amazon-science/spot-diff/blob/2a692ab575001cbde74d402d897a7286086c6199/NOTICE",
+      "sha256": "17ac4f8874c43d85d74851568c8adbd4a5624b652ca7c381c81ffb5216582f4a",
+      "bytes": 334,
+      "upstream_blob_sha": "d3a7698119aecdf2654115aaf814e448fe0c4a0d",
+      "vendored_source_commit": "unknown"
+    },
+    {
+      "file": "licenses/VisA-DATASET-LICENSE.txt",
+      "repository": "amazon-science/spot-diff",
+      "commit": "2a692ab575001cbde74d402d897a7286086c6199",
+      "upstream_path": "LICENSE-DATASET",
+      "url": "https://github.com/amazon-science/spot-diff/blob/2a692ab575001cbde74d402d897a7286086c6199/LICENSE-DATASET",
+      "sha256": "9e5f1b3c610b9c2da5c313bf81d577a7d1acec686bdb0384edefa6df0f90cd94",
+      "bytes": 18656,
+      "upstream_blob_sha": "4ea99c213c5c0c005ae4e80df8e52169d06896ec",
+      "vendored_source_commit": "unknown"
+    }
+  ]
+}

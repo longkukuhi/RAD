@@ -1,0 +1,27 @@
+{
+  "source_base": "59847f4f55082c31649d4e0a2dd0ec329b932633",
+  "test_count": 99,
+  "files": {
+    "requirements.txt": "95abc04a958742776784afa85e0833457c24101f9de163352c2e021239ebb91b",
+    "requirements-test.txt": "4163bb2f842cc0633fc3e4204d5b4bc873a18cb5c9b06b762718ce9cdd624b5d",
+    "utils.py": "5664a0f767f4e475536b7cd45ca12374a54ad6e0a85a2a23a3f6a115a98b3ff4",
+    "dataset.py": "3a209f5645f5fdfec35d5a5cf01220c0c4594570a9f0a0498aa51c7d02a39837",
+    "build_bank_multilayer.py": "48622b1573754807692b6d1aa8b9fc2190b6c48e7436174989646e3fdc43d25f",
+    "build_realiad_bank_multilayer.py": "042628748da7ea1f97b3ba0eab78582c64ba9f29200bc3ad564fdfd61f844e64",
+    "rad_mvtec_visa_3dadam.py": "134177057d96aa0816d8341759d6e0a5787dd9556d62c6760283d265e29f4de8",
+    "rad_real_iad.py": "0c835310e62fb0d9e76dea5fc0da24e23dde9d13706b2212ec6efdd010100add",
+    "rad_bank.py": "2634e3c53d0c9f52381f948bc12685037b62e1a52d7cd6b3e94dee759dca3bc2",
+    "rad_cli.py": "0351186ede241635072a58f09bd97a329083c543a1dc25a11ba3e71ae33b3df3",
+    "rad_evaluation.py": "326714038e500765ce71042823f72f45648e717a8acdca3f490daf61e8458afc",
+    "rad_metrics.py": "6072a582f14fd293cfab83405fa4aeddda03a9fdea219c1612b18b66497e3131",
+    "rad_resources.py": "1cfbd22b176c3e87d0f59c5f702985bc02763ff0f17b5e68c0679a364e176796",
+    "rad_retrieval.py": "031c24f379cd02db5d59da8ed395b0d54db520a050e6ffa76b5b058b2fbd249e",
+    "tests/benchmark_streaming.py": "57d9f8759c137c42fc7dd40534c5f6c695c73b29b6f4d218f02bcf198db8c163",
+    "tests/test_rad_bank.py": "018a145343d4287f4119057c264b4a4f0bbd68867365ce0225aafe0ec92802ef",
+    "tests/test_rad_cli.py": "08cbbb4c262cccb377e0277e3f6d247a03a37cbf3a81b0ebf0ff2fea871be6dc",
+    "tests/test_rad_evaluation.py": "802011bf1ea36447b5e940bbb73f516774dbbf48dd73eefdb5cdec347590fb02",
+    "tests/test_rad_metrics.py": "8731c977af9de804819f193e7cf3b210dfc268687a4880a6e23337396d240065",
+    "tests/test_rad_resources.py": "5dc738ca77dcde74cf7526f5ae19cfb3e71a0d3170e76ef7a1f89d07da897142",
+    "tests/test_rad_retrieval.py": "adf0d93a74eecbb6a7df31aa9d8facc56d451cbad7c09ae2d07cd1b0c09fc030"
+  }
+}

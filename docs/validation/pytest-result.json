@@ -1,0 +1,6 @@
+{
+  "exit_code": 0,
+  "elapsed_seconds": 2.9301113749388605,
+  "peak_process_rss_bytes": 413237248,
+  "scope": "CPU unit and synthetic tests; no encoder/checkpoint or real dataset loaded"
+}
