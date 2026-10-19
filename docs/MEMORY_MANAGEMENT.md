@@ -51,9 +51,13 @@ Defaults:
 - Monitoring: at cooperative batch/chunk checkpoints, normally every 5 seconds.
 - Sustained paging: combined input/output at least 1 MiB/s in two valid windows.
   A used but inactive swap file alone does not cause rejection.
-- WSL shared GPU usage: growth of at least 64 MiB from admission stops work for
-  investigation. The counter covers Windows adapters; it does not identify
-  which process caused growth.
+- WSL shared GPU usage: the selected adapter's **total** shared usage plus main
+  process RSS must fit the registered RAM budget. This conservative sum may
+  double-count mapped/pinned memory and includes other processes. Exceeding it
+  means the budget cannot be certified, not that RAD caused that occupancy.
+  Shared usage is never credited against remaining allocation demand or counted
+  as dedicated VRAM. CUDA initialization can use shared RAM with ample dedicated
+  VRAM; growth alone is not evidence of paging or VRAM spill.
 
 `--ram-budget-gib` and `--gpu-budget-gib` mean **total conservative task peaks**,
 not additional memory to allocate. The guard credits current main-process RSS
@@ -73,8 +77,21 @@ the device occupancy or exceeded its budget. Missing/invalid device capacity or
 measurement source still prevents admission. The JSONL receipt labels the
 combined GPU peak's measurement kind and scope and reports exact-process and
 device-upper-bound sampled peaks separately; a peak containing an upper bound
-is not a measured task-only peak. GPU identities/shared-memory counters still
-require independent verification on the target host.
+is not a measured task-only peak.
+
+GPU selection is verified automatically. A context-free CUDA Driver query
+resolves the actual visible CUDA ordinal to its UUID, respecting CUDA visibility
+and ordering; `nvidia-smi` is queried by that UUID. On WSL, a separate native
+Windows CUDA Driver query maps the UUID to one unique LUID. Identity queries are
+cached for the task, but every check requires the same target Windows
+`GPUAdapterMemory` counter with valid dedicated/shared values. Another GPU's
+counter cannot substitute for a missing target. The default collector supports
+only an unambiguous single-node mapping (`node_mask=1`, unique `phys_0` counter);
+duplicate UUIDs/LUIDs, linked or multiple nodes, changing selection/counter
+identity, or missing data prevent admission/continuation. This does not require
+manual external identity evidence or hardcoded machine LUIDs. The receipt keeps
+the verified UUID/LUID/node mask and current target counter. These queries do not
+create a CUDA context or allocate model tensors; CPU runs never load CUDA.
 
 The default analytic estimate includes encoder parameters, checkpoint loading,
 float32 activations, an attention-matrix fallback, selected feature outputs,

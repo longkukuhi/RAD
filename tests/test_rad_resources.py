@@ -122,11 +122,45 @@ class ResourceTests(unittest.TestCase):
                 self.failure([snap(0,**values)],'gpu_unverified',device='cuda:0',gpu_budget_bytes=8*GIB)
     def test_gpu_cannot_borrow_shared_memory(self):self.failure([snap(0,gpu_total_bytes=16*GIB,gpu_free_bytes=GIB,gpu_process_bytes=0)],'insufficient_gpu',device='cuda:0',gpu_budget_bytes=2*GIB)
     def test_wsl_gpu_shared_must_be_verified(self):self.failure([host(0,gpu_total_bytes=16*GIB,gpu_free_bytes=8*GIB,gpu_process_bytes=0)],'gpu_shared_unverified',device='cuda:0',gpu_budget_bytes=2*GIB)
-    def test_existing_shared_ok_growth_stops(self):
+    def test_shared_context_growth_is_charged_to_ram_not_called_paging(self):
         def v(t,shared):return host(t,gpu_total_bytes=16*GIB,gpu_free_bytes=8*GIB,gpu_process_bytes=0,gpu_shared_verified=True,gpu_shared_used_bytes=shared)
         g,c=self.guard([v(i,20*MIB) for i in range(3)]+[v(8,100*MIB)],device='cuda:0',gpu_budget_bytes=2*GIB);g.preflight();c.now=8
-        with self.assertRaises(ResourcePressureError) as e:g.check()
-        self.assertEqual(e.exception.evidence['code'],'gpu_shared_growth')
+        receipt=g.check()
+        self.assertEqual(receipt['status'],'checked')
+        self.assertEqual(receipt['ram_with_shared_upper_bound_bytes'],2*GIB+100*MIB)
+        self.assertEqual(receipt['remaining_ram_budget_bytes'],6*GIB)
+        self.assertEqual(receipt['observed_peak_gpu_shared_device_bytes'],100*MIB)
+        self.assertIn('not proof',receipt['gpu_shared_measurement_scope'])
+    def test_shared_total_not_only_growth_is_bounded(self):
+        error=self.failure([host(0,gpu_total_bytes=16*GIB,gpu_free_bytes=8*GIB,
+            gpu_process_bytes=0,gpu_shared_verified=True,gpu_shared_used_bytes=7*GIB)],
+            'ram_shared_upper_bound_exceeded',device='cuda:0',gpu_budget_bytes=2*GIB)
+        self.assertEqual(error.evidence['ram_with_shared_upper_bound_bytes'],9*GIB)
+        self.assertIn('includes other processes',str(error))
+    def test_shared_ram_boundary_and_later_growth(self):
+        def value(t,shared):return host(t,gpu_total_bytes=16*GIB,gpu_free_bytes=8*GIB,
+            gpu_process_bytes=0,gpu_shared_verified=True,gpu_shared_used_bytes=shared)
+        g,c=self.guard([value(i,6*GIB) for i in range(3)]+[value(8,6*GIB+1)],
+            device='cuda:0',gpu_budget_bytes=2*GIB)
+        self.assertEqual(g.preflight()['ram_with_shared_upper_bound_bytes'],8*GIB)
+        c.now=8
+        with self.assertRaises(ResourcePressureError) as error:g.check()
+        self.assertEqual(error.exception.evidence['code'],'ram_shared_upper_bound_exceeded')
+    def test_shared_usage_receives_no_host_remaining_budget_credit(self):
+        # 16 GiB host reserve + 6 GiB remaining: shared usage is already
+        # reflected in available RAM and cannot reduce the remaining demand.
+        self.failure([host(0,host_available_bytes=21*GIB,gpu_total_bytes=16*GIB,
+            gpu_free_bytes=8*GIB,gpu_process_bytes=0,gpu_shared_verified=True,
+            gpu_shared_used_bytes=3*GIB)],'insufficient_host_ram',device='cuda:0',gpu_budget_bytes=2*GIB)
+    def test_shared_within_ram_budget_does_not_bypass_dedicated_capacity(self):
+        self.failure([host(0,gpu_total_bytes=16*GIB,gpu_free_bytes=GIB,gpu_process_bytes=0,
+            gpu_shared_verified=True,gpu_shared_used_bytes=MIB)],'insufficient_gpu',
+            device='cuda:0',gpu_budget_bytes=2*GIB)
+    def test_shared_within_budget_does_not_bypass_sustained_paging(self):
+        samples=[host(i,gpu_total_bytes=16*GIB,gpu_free_bytes=8*GIB,gpu_process_bytes=0,
+            gpu_shared_verified=True,gpu_shared_used_bytes=100*MIB,
+            swap_out_bytes=i*2*MIB) for i in range(3)]
+        self.failure(samples,'sustained_paging',device='cuda:0',gpu_budget_bytes=2*GIB)
     def test_throttle(self):
         g,c=self.guard([snap(0),snap(1),snap(2),snap(8)]);g.preflight()
         for _ in range(100):self.assertIsNone(g.check())
@@ -216,11 +250,18 @@ class ResourceTests(unittest.TestCase):
     def test_cli_overrides(self):
         a=add_resource_arguments(argparse.ArgumentParser()).parse_args(['--ram-budget-gib','12','--gpu-budget-gib','3']);g=guard_from_args(a,GIB,2*GIB,device='cuda:0');self.assertEqual(g.ram_budget_bytes,12*GIB);self.assertEqual(g.gpu_budget_bytes,3*GIB)
     def test_cuda_visible_mapping(self):
-        with patch.dict('os.environ',{'CUDA_VISIBLE_DEVICES':'GPU-a,GPU-b'}),patch('rad_resources._run',side_effect=['16000, 12000','']) as r:_gpu_probe('cuda:1');self.assertIn('--id=GPU-b',r.call_args_list[0].args[0])
+        selected='GPU-12345678-1234-1234-1234-123456789abc'
+        with patch.dict('os.environ',{'CUDA_VISIBLE_DEVICES':'2,1'}),\
+                patch('rad_resources._cuda_device_identity',return_value={'uuid':selected}) as identify,\
+                patch('rad_resources._run',side_effect=['16000, 12000','']) as run:
+            _gpu_probe('cuda:1')
+            identify.assert_called_once_with('cuda:1')
+            self.assertIn('--id='+selected,run.call_args_list[0].args[0])
     def gpu_query(self,process_rows,total_free='16000, 12000'):
         responses=[subprocess.CompletedProcess([],0,stdout=value,stderr='')
                    for value in (total_free,process_rows)]
         with patch.dict('os.environ',{'CUDA_VISIBLE_DEVICES':'0'}),\
+                patch('rad_resources._cuda_device_identity',return_value={'uuid':'GPU-12345678-1234-1234-1234-123456789abc'}),\
                 patch('rad_resources.os.getpid',return_value=12345),\
                 patch('rad_resources.subprocess.run',side_effect=responses) as run:
             result=_gpu_probe('cuda:0')

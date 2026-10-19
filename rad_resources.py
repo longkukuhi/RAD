@@ -12,6 +12,7 @@ clears caches, changes WSL limits, or resumes an interrupted experiment.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import dataclasses
 import json
 import math
@@ -166,24 +167,178 @@ def _windows_host():
     return json.loads(text.lstrip('\ufeff'))
 
 
-def _gpu_probe(device):
+def _normalise_gpu_uuid(value):
+    if not isinstance(value, str) or not re.fullmatch(r'GPU-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', value, re.I):
+        raise ValueError('CUDA GPU UUID is missing or malformed')
+    if not any(c != '0' for c in value[4:].replace('-', '')):
+        raise ValueError('CUDA GPU UUID is zero')
+    return 'GPU-' + value[4:].lower()
+
+
+def _cuda_device_identity(device):
+    """Resolve the actual visible CUDA ordinal without creating a context.
+
+    CUDA itself applies visibility and device-order rules; nvidia-smi ordinals
+    are not interchangeable with CUDA ordinals. No torch import is required.
+    """
+    match = re.fullmatch(r'cuda(?::(\d+))?', str(device))
+    if not match:
+        raise ValueError('Only CPU and NVIDIA CUDA devices have a verified default resource probe')
+    ordinal = int(match.group(1) or 0)
+    driver = ctypes.CDLL('libcuda.so.1')
+    def call(name, arguments, types):
+        function = getattr(driver, name)
+        function.argtypes, function.restype = types, ctypes.c_int
+        result = function(*arguments)
+        if result != 0:
+            raise ValueError(f'{name} could not verify CUDA device identity (CUDA error {result})')
+    call('cuInit', [0], [ctypes.c_uint])
+    count, handle = ctypes.c_int(), ctypes.c_int()
+    call('cuDeviceGetCount', [ctypes.byref(count)], [ctypes.POINTER(ctypes.c_int)])
+    if not 0 <= ordinal < count.value <= 64:
+        raise ValueError('CUDA ordinal is not present in the bounded visible device inventory')
+    call('cuDeviceGet', [ctypes.byref(handle), ordinal], [ctypes.POINTER(ctypes.c_int), ctypes.c_int])
+    uuid_bytes = (ctypes.c_ubyte * 16)()
+    name = 'cuDeviceGetUuid_v2' if hasattr(driver, 'cuDeviceGetUuid_v2') else 'cuDeviceGetUuid'
+    call(name, [uuid_bytes, handle.value], [ctypes.POINTER(ctypes.c_ubyte), ctypes.c_int])
+    text = bytes(uuid_bytes).hex()
+    gpu_uuid = _normalise_gpu_uuid('GPU-' + '-'.join((text[:8], text[8:12], text[12:16], text[16:20], text[20:])))
+    return {'uuid':gpu_uuid, 'cuda_ordinal':ordinal,
+            'source':f'Linux CUDA Driver {name}; no context created'}
+
+
+_WINDOWS_CUDA_IDENTITIES = r'''
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding
+# Enumerate all adapters in this short-lived probe process only.
+[Environment]::SetEnvironmentVariable('CUDA_VISIBLE_DEVICES', $null, 'Process')
+Add-Type -Language CSharp -TypeDefinition @'
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+public static class RadCudaIdentity {
+ [DllImport("nvcuda.dll", ExactSpelling=true)]
+ [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+ static extern int cuInit(uint flags);
+ [DllImport("nvcuda.dll", ExactSpelling=true)]
+ [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+ static extern int cuDeviceGetCount(out int count);
+ [DllImport("nvcuda.dll", ExactSpelling=true)]
+ [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+ static extern int cuDeviceGet(out int device, int ordinal);
+ [DllImport("nvcuda.dll", ExactSpelling=true)]
+ [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+ static extern int cuDeviceGetUuid([Out] byte[] uuid, int device);
+ [DllImport("nvcuda.dll", ExactSpelling=true)]
+ [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+ static extern int cuDeviceGetUuid_v2([Out] byte[] uuid, int device);
+ [DllImport("nvcuda.dll", ExactSpelling=true)]
+ [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+ static extern int cuDeviceGetLuid([Out] byte[] luid, out uint nodeMask, int device);
+ public sealed class Row { public string uuid; public string luid; public uint node_mask; }
+ static void Check(int value, string api) {
+  if (value != 0) throw new InvalidOperationException(api + " CUDA error " + value);
+ }
+ public static Row[] Read() {
+  if (IntPtr.Size != 8) throw new InvalidOperationException("64-bit PowerShell required");
+  Check(cuInit(0), "cuInit");
+  int count; Check(cuDeviceGetCount(out count), "cuDeviceGetCount");
+  if (count < 1 || count > 64) throw new InvalidOperationException("Invalid CUDA device count");
+  var rows = new List<Row>();
+  for (int i=0; i<count; i++) {
+   int device; Check(cuDeviceGet(out device, i), "cuDeviceGet");
+   byte[] uuid = new byte[16];
+   try { Check(cuDeviceGetUuid_v2(uuid, device), "cuDeviceGetUuid_v2"); }
+   catch (EntryPointNotFoundException) { Check(cuDeviceGetUuid(uuid, device), "cuDeviceGetUuid"); }
+   byte[] luid = new byte[8]; uint mask;
+   Check(cuDeviceGetLuid(luid, out mask, device), "cuDeviceGetLuid");
+   string u = BitConverter.ToString(uuid).Replace("-", "").ToLowerInvariant();
+   rows.Add(new Row {
+    uuid = "GPU-" + u.Substring(0,8) + "-" + u.Substring(8,4) + "-" + u.Substring(12,4) + "-" + u.Substring(16,4) + "-" + u.Substring(20,12),
+    luid = "luid_0x" + BitConverter.ToUInt32(luid,4).ToString("x8") + "_0x" + BitConverter.ToUInt32(luid,0).ToString("x8"),
+    node_mask = mask });
+  }
+  return rows.ToArray();
+ }
+}
+'@
+[pscustomobject]@{ source='Windows native CUDA Driver UUID/LUID device queries; no context created'; devices=@([RadCudaIdentity]::Read()) } | ConvertTo-Json -Depth 4 -Compress
+'''
+
+
+def _windows_gpu_identities():
+    text = _run(['powershell.exe', '-NoLogo', '-NoProfile', '-NonInteractive',
+                 '-Command', _WINDOWS_CUDA_IDENTITIES], timeout=20)
+    result = json.loads(text.lstrip('\ufeff'))
+    if not isinstance(result, dict) or not result.get('source'):
+        raise ValueError('Windows native CUDA identity source is missing')
+    return result
+
+
+def _map_windows_gpu_identity(selected, inventory):
+    if not isinstance(selected, dict) or not isinstance(selected.get('source'), str) or not selected['source'].strip():
+        raise ValueError('Selected CUDA identity source is missing')
+    if not isinstance(inventory, dict) or not isinstance(inventory.get('source'), str) or not inventory['source'].strip():
+        raise ValueError('Windows native CUDA identity source is missing')
+    gpu_uuid = _normalise_gpu_uuid(selected.get('uuid'))
+    rows = inventory.get('devices')
+    if not isinstance(rows, list) or not 1 <= len(rows) <= 64 or not inventory.get('source'):
+        raise ValueError('Windows native CUDA identity inventory is invalid')
+    matches = [row for row in rows if isinstance(row, dict) and _normalise_gpu_uuid(row.get('uuid')) == gpu_uuid]
+    if len(matches) != 1:
+        raise ValueError('Selected CUDA UUID has no unique Windows native LUID mapping')
+    chosen = matches[0]
+    luid = chosen.get('luid')
+    mask = chosen.get('node_mask')
+    if (not isinstance(luid, str) or not re.fullmatch(r'luid_0x[0-9a-f]{8}_0x[0-9a-f]{8}', luid, re.I)
+            or luid.lower() == 'luid_0x00000000_0x00000000'
+            or not isinstance(mask, int) or isinstance(mask, bool) or not 0 < mask < 2**32):
+        raise ValueError('Selected Windows CUDA LUID/node mask is invalid')
+    if mask != 1:
+        raise ValueError('Windows GPU counter mapping supports only an unambiguous single node (node_mask=1); linked/multiple nodes are unverified')
+    luid = luid.lower()
+    if sum(isinstance(row, dict) and str(row.get('luid', '')).lower() == luid for row in rows) != 1:
+        raise ValueError('Selected CUDA LUID is ambiguous across Windows devices')
+    return {**selected, 'luid':luid, 'node_mask':mask, 'windows_source':inventory['source']}
+
+
+def _selected_windows_gpu_counter(host, identity):
+    rows = host.get('gpu_adapters')
+    if isinstance(rows, dict):
+        rows = [rows]
+    if not isinstance(rows, list) or len(rows) > 256:
+        raise ValueError('Windows GPUAdapterMemory inventory is unavailable or unbounded')
+    matches = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError('Malformed Windows GPUAdapterMemory row')
+        match = re.fullmatch(r'(luid_0x[0-9a-f]{8}_0x[0-9a-f]{8})(?:_phys_(\d+))?', str(row.get('Name', '')), re.I)
+        if match and match.group(1).lower() == identity['luid']:
+            matches.append((row, match.group(2)))
+    if len(matches) != 1:
+        raise ValueError('Selected CUDA LUID has no unique current Windows GPUAdapterMemory counter; missing is not zero')
+    row, physical_index = matches[0]
+    # Do not extrapolate CUDA node bits to arbitrary performance-counter phys_N
+    # instances. The default collector supports the single-node phys_0 case.
+    if identity.get('node_mask') != 1 or physical_index != '0':
+        raise ValueError('Selected GPU counter physical-node identity is unsupported or changed; require node_mask=1 and phys_0')
+    for name in ('SharedUsage', 'DedicatedUsage'):
+        value = row.get(name)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0 or int(value) != value:
+            raise ValueError('Selected Windows GPUAdapterMemory ' + name + ' is missing or invalid')
+    return row
+
+
+def _gpu_probe(device, identity=None):
     """Return dedicated capacity and exact own usage or a whole-device upper bound.
 
     WSL/WDDM may omit a process or report its memory as N/A. Device total/free
     remain independently checked; their difference bounds own residency but
     also includes contexts and other processes. Missing process data is not zero.
     """
-    match = re.fullmatch(r'cuda(?::(\d+))?', str(device))
-    if not match:
-        raise ValueError('Only CPU and NVIDIA CUDA devices have a verified default resource probe')
-    ordinal = int(match.group(1) or 0)
-    visible = os.environ.get('CUDA_VISIBLE_DEVICES')
-    physical = str(ordinal)
-    if visible is not None:
-        tokens = [x.strip() for x in visible.split(',') if x.strip()]
-        if ordinal >= len(tokens) or tokens[ordinal] == '-1':
-            raise ValueError('CUDA device is not present in CUDA_VISIBLE_DEVICES')
-        physical = tokens[ordinal]
+    identity = identity if identity is not None else _cuda_device_identity(device)
+    physical = _normalise_gpu_uuid(identity.get('uuid'))
     row = _run(['nvidia-smi', '--id=' + physical, '--query-gpu=memory.total,memory.free',
                 '--format=csv,noheader,nounits']).splitlines()
     if len(row) != 1:
@@ -215,6 +370,19 @@ class SystemProbe:
     """Bounded system reads; invoked at most once per configured check interval."""
     def __init__(self, device='cpu', clock=time.monotonic):
         self.device, self.clock = str(device), clock
+        self._gpu_identity = None
+        self._gpu_environment = None
+        self._windows_gpu_identity = None
+        self._windows_gpu_counter_name = None
+
+    def _selected_gpu(self):
+        environment = (self.device, os.getpid(), os.environ.get('CUDA_VISIBLE_DEVICES'), os.environ.get('CUDA_DEVICE_ORDER'))
+        if self._gpu_environment is not None and environment != self._gpu_environment:
+            raise ValueError('CUDA selection environment changed after resource admission; create a fresh task')
+        if self._gpu_identity is None:
+            self._gpu_identity = _cuda_device_identity(self.device)
+            self._gpu_environment = environment
+        return self._gpu_identity
 
     def __call__(self):
         system = platform.system()
@@ -264,13 +432,19 @@ class SystemProbe:
                 snapshot.host_measurement_kind = 'upper_bound'
                 snapshot.host_pagefile_source = 'Win32_PerfRawData_PerfOS_Memory PagesInputPersec/PagesOutputPersec cumulative counters'
                 snapshot.diagnostics['host_pagefile_limitation'] = 'Disk hard-page I/O includes mapped files; pagefile-only I/O <= reported upper bound'
-                adapters = host.get('gpu_adapters', [])
-                if isinstance(adapters, dict):
-                    adapters = [adapters]
-                if adapters and all(a.get('SharedUsage') is not None and int(a['SharedUsage']) >= 0 for a in adapters):
-                    snapshot.gpu_shared_used_bytes = sum(int(a['SharedUsage']) for a in adapters)
+                if self.device != 'cpu':
+                    if self._windows_gpu_identity is None:
+                        self._windows_gpu_identity = _map_windows_gpu_identity(self._selected_gpu(), _windows_gpu_identities())
+                    counter = _selected_windows_gpu_counter(host, self._windows_gpu_identity)
+                    counter_name = counter['Name'].lower()
+                    if self._windows_gpu_counter_name is not None and counter_name != self._windows_gpu_counter_name:
+                        raise ValueError('Selected Windows GPUAdapterMemory counter identity changed; fresh admission is required')
+                    self._windows_gpu_counter_name = counter_name
+                    snapshot.gpu_shared_used_bytes = int(counter['SharedUsage'])
                     snapshot.gpu_shared_verified = True
-                    snapshot.diagnostics['gpu_shared_scope'] = 'all Windows adapters; existing residency is included in host available RAM, growth is not attributed to this task'
+                    snapshot.diagnostics['gpu_identity'] = dict(self._windows_gpu_identity)
+                    snapshot.diagnostics['gpu_shared_counter'] = dict(counter)
+                    snapshot.diagnostics['gpu_shared_scope'] = 'selected CUDA device mapped by UUID to native Windows LUID; adapter aggregate includes other processes'
         elif system == 'Darwin':
             total = int(_run(['sysctl', '-n', 'hw.memsize']))
             stat = _run(['vm_stat'])
@@ -293,7 +467,8 @@ class SystemProbe:
             raise ValueError('Unsupported native OS; supply a verified ResourceSnapshot probe')
         if self.device != 'cpu':
             (snapshot.gpu_total_bytes, snapshot.gpu_free_bytes,
-             snapshot.gpu_process_bytes, snapshot.gpu_process_measurement_kind) = _gpu_probe(self.device)
+             snapshot.gpu_process_bytes, snapshot.gpu_process_measurement_kind) = _gpu_probe(self.device, identity=self._selected_gpu())
+            snapshot.diagnostics.setdefault('gpu_identity', dict(self._gpu_identity))
             if snapshot.gpu_process_measurement_kind == 'exact':
                 snapshot.gpu_process_source = 'nvidia-smi selected-device compute-apps used_memory for all matching current-PID rows'
             else:
@@ -343,9 +518,10 @@ class ResourceGuard:
         self._last_check = None
         self._paging_streak = {'linux_or_local':0, 'windows_host':0}
         self._admitted = False
-        self._gpu_shared_baseline = None
         self._stopped = False
         self.peak_rss_bytes = 0
+        self.peak_gpu_shared_device_bytes = None
+        self.peak_ram_with_shared_upper_bound_bytes = None
         self.peak_gpu_bytes = 0
         self.peak_gpu_exact_bytes = None
         self.peak_gpu_device_used_upper_bound_bytes = None
@@ -362,6 +538,9 @@ class ResourceGuard:
                  'ram_peak_budget_bytes':self.ram_budget_bytes,
                  'gpu_peak_budget_bytes':self.gpu_budget_bytes,
                  'observed_peak_rss_bytes':self.peak_rss_bytes,
+                 'observed_peak_gpu_shared_device_bytes':self.peak_gpu_shared_device_bytes,
+                 'observed_peak_ram_with_shared_upper_bound_bytes':self.peak_ram_with_shared_upper_bound_bytes,
+                 'shared_gpu_accounting':'selected-adapter shared TOTAL + process RSS; conservative RAM upper bound, may double-count and include other processes; never credited as own usage',
                  'observed_peak_gpu_bytes':self.peak_gpu_bytes,
                  'observed_peak_gpu_measurement_kind':gpu_peak_kind,
                  'observed_peak_gpu_scope':gpu_peak_scope,
@@ -476,11 +655,26 @@ class ResourceGuard:
             if snapshot.wsl and (not snapshot.gpu_shared_verified or snapshot.gpu_shared_used_bytes is None or not math.isfinite(snapshot.gpu_shared_used_bytes) or snapshot.gpu_shared_used_bytes < 0):
                 self._stop('gpu_shared_unverified', 'Windows shared GPU memory risk cannot be verified.', evidence)
             if snapshot.wsl:
-                if self._gpu_shared_baseline is None:
-                    self._gpu_shared_baseline = snapshot.gpu_shared_used_bytes
-                if snapshot.gpu_shared_used_bytes - self._gpu_shared_baseline >= 64 * MIB:
-                    self._stop('gpu_shared_growth', 'Windows shared GPU RAM increased by at least 64 MiB from admission baseline; preserve progress and verify the dedicated-memory budget. Other processes may also cause this growth.', evidence)
-                evidence['gpu_shared_baseline_bytes'] = self._gpu_shared_baseline
+                # CUDA context/driver bookkeeping can use shared host RAM even
+                # with abundant dedicated VRAM. Growth alone is not paging.
+                # Charge the ENTIRE selected adapter's shared usage to this
+                # task's RAM budget, including pre-existing/other-process usage.
+                # Adding RSS may double-count pinned/mapped allocations; that
+                # is conservative. Do not credit this unattributed quantity
+                # against remaining demand: host availability already reflects
+                # it, and the checks above still reserve budget minus own RSS.
+                combined = snapshot.process_rss_bytes + snapshot.gpu_shared_used_bytes
+                self.peak_gpu_shared_device_bytes = max(self.peak_gpu_shared_device_bytes or 0,
+                                                       snapshot.gpu_shared_used_bytes)
+                self.peak_ram_with_shared_upper_bound_bytes = max(
+                    self.peak_ram_with_shared_upper_bound_bytes or 0, combined)
+                evidence['ram_with_shared_upper_bound_bytes'] = combined
+                evidence['gpu_shared_measurement_scope'] = 'selected adapter total; includes other processes, not proof of VRAM spill or paging'
+                if combined > self.ram_budget_bytes:
+                    self._stop('ram_shared_upper_bound_exceeded',
+                               'Process RSS plus selected-adapter shared GPU RAM exceeds the registered RAM budget, '
+                               'so the task peak cannot be certified. This conservative sum may double-count memory '
+                               'and includes other processes; preserve progress and verify attribution or available budget.', evidence)
         return evidence
 
     def _paging(self, previous, current, allow_deferred=False):
