@@ -40,6 +40,40 @@ def dense_patch(query, neighbors, positional, radius):
     return torch.stack(scores)
 
 
+class PositionGeometryTests(unittest.TestCase):
+    def test_chunk_geometry_preserves_order_padding_and_valid_mask(self):
+        # Independent oracle scans the whole tiny grid in flattened order and
+        # filters by Chebyshev distance; no features, encoder, or CUDA are used.
+        cases = [
+            (0, 5, 4, 1),    # top-left corner plus ragged edge/interior rows
+            (14, 16, 4, 1),  # partial final chunk including bottom-right corner
+            (3, 9, 4, 0),    # radius zero, crossing a row boundary
+            (2, 5, 4, 99),   # radius larger than the grid covers every position
+            (0, 1, 1, 0),    # smallest valid grid/chunk
+        ]
+        for start, stop, grid, radius in cases:
+            with self.subTest(start=start, stop=stop, grid=grid, radius=radius):
+                rows = []
+                for query in range(start, stop):
+                    qr, qc = divmod(query, grid)
+                    rows.append([candidate for candidate in range(grid * grid)
+                                 if max(abs(candidate // grid - qr),
+                                        abs(candidate % grid - qc)) <= radius])
+                width = max(map(len, rows))
+                expected_indices = [row + [0] * (width-len(row)) for row in rows]
+                expected_valid = [[True] * len(row) + [False] * (width-len(row))
+                                  for row in rows]
+                indices, valid = ChunkedRetriever._positions(start, stop, grid, radius, 'cpu')
+                self.assertEqual(indices.device.type, 'cpu')
+                self.assertEqual(valid.device.type, 'cpu')
+                self.assertEqual(indices.dtype, torch.long)
+                self.assertEqual(valid.dtype, torch.bool)
+                self.assertEqual(tuple(indices.shape), (stop-start, width))
+                self.assertEqual(tuple(valid.shape), (stop-start, width))
+                self.assertEqual(indices.tolist(), expected_indices)
+                self.assertEqual(valid.tolist(), expected_valid)
+
+
 class RetrievalTests(unittest.TestCase):
     def setUp(self):
         torch.manual_seed(1)

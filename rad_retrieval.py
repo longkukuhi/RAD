@@ -99,11 +99,15 @@ class ChunkedRetriever:
                 for c in range(max(0, col-radius), min(grid, col+radius+1))
             ])
         width = max(map(len, positions))
-        indices = torch.zeros((stop-start, width), dtype=torch.long, device=device)
-        valid = torch.zeros((stop-start, width), dtype=torch.bool, device=device)
-        for row, ids in enumerate(positions):
-            indices[row, :len(ids)] = torch.tensor(ids, device=device)
-            valid[row, :len(ids)] = True
+        valid = []
+        for ids in positions:
+            count = len(ids)
+            valid.append([True] * count + [False] * (width-count))
+            ids.extend([0] * (width-count))
+        # Assemble on CPU, then transfer each complete chunk once. Preserve
+        # row-major neighborhoods, zero padding, and the original valid mask.
+        indices = torch.tensor(positions, dtype=torch.long, device=device)
+        valid = torch.tensor(valid, dtype=torch.bool, device=device)
         return indices, valid
 
     def _chunks(self, patches, channels, positional, radius, batch=1, reserved_bytes=0):
@@ -120,8 +124,12 @@ class ChunkedRetriever:
                 work = ksize * qsize * positions * channels * 4 * 2
             else:
                 work = qsize * ksize * patches * 4 * 2
+            # CPU index/mask lists and their temporary/tensor storage, plus
+            # device int64/bool buffers. Conservative allowance per pair/row;
+            # no geometry is cached beyond the current query chunk.
+            geometry = (qsize * positions * 128 + qsize * 512 + 512) if positional else 0
             return (features + work + patches * channels * 4 * (batch + 1)
-                    + batch * patches * 4 * 4 + reserved_bytes)
+                    + batch * patches * 4 * 4 + reserved_bytes + geometry)
         while estimate(q, k) > budget and (k > 1 or q > 1):
             if k > 1:
                 k = max(1, k // 2)
