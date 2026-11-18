@@ -1,32 +1,23 @@
-<h1 align="center">RAD</h1>
-<p align="center"><strong>Is Task-Specific Training Necessary for Anomaly Detection?</strong><br>ICML 2026 · Official PyTorch implementation</p>
+# RAD
 
-<p align="center"><img src="assets/arch.png" alt="Overview of the RAD anomaly detection framework" width="960"></p>
+**Is Task-Specific Training Necessary for Anomaly Detection?** Official PyTorch implementation, ICML 2026. [Paper and BibTeX](https://proceedings.mlr.press/v306/zhang26ck.html).
 
-RAD performs multi-class image anomaly detection and localization with a frozen DINOv3 encoder and a multi-layer reference bank. It retrieves similar normal images, compares patch features, and combines scores across layers without task-specific parameter optimization.
+RAD detects anomalous images and localizes defects without optimizing model parameters on the target dataset. A frozen DINOv3 encoder first builds a reference bank from **normal training images**. For each test image, RAD retrieves similar references, compares patch features and fuses anomaly scores across encoder layers.
 
-**Training-free still requires normal training images:** first extract their features into a memory bank, then evaluate test images. The examples cover MVTec AD, VisA, Real-IAD, and the RGB modality of 3D-ADAM.
+![RAD reference-bank construction and anomaly localization](assets/arch.png)
 
-> **Memory-bounded implementation:** reference features and metric inputs are written to disk in batches. Retrieval uses bounded chunks while retaining every reference, every selected layer, and float32 features. See [memory management](docs/MEMORY_MANAGEMENT.md) and [validation](docs/VALIDATION.md) for the implementation and evidence.
+## Run the published protocol
 
-## News
+Set up the [environment](#setup) and download the [encoder checkpoint](#pretrained-encoder). Choose the dataset below to prepare its split, build its reference bank and evaluate its test images. The recipes use the paper implementation’s four-layer configuration. Bank construction needs only the normal training split. Evaluation needs the test images and their annotations.
 
-- **2026-05-01:** RAD accepted at ICML 2026.
-- **2026-01-28:** Code released.
+| Dataset | Prepare the data | Build and evaluate |
+| --- | --- | --- |
+| MVTec AD | [Folder layout](#prepare-mvtec-ad) | [MVTec AD commands](#run-mvtec-ad) |
+| VisA | [Convert the 1-class split](#prepare-visa) | [VisA commands](#run-visa) |
+| Real-IAD | [Images and JSON annotations](#prepare-real-iad) | [Real-IAD commands](#run-real-iad) |
+| 3D-ADAM (RGB) | [Convert the RGB split](#prepare-3d-adam) | [3D-ADAM commands](#run-3d-adam) |
 
-## Contents
-
-- [Setup](#setup)
-- [Datasets](#datasets)
-- [Pretrained encoder](#pretrained-encoder)
-- [Build a bank and evaluate](#build-a-bank-and-evaluate)
-- [Parameters and reproducibility](#parameters-and-reproducibility)
-- [Outputs](#outputs)
-- [Memory requirements](#memory-requirements)
-- [Interruption and recovery](#interruption-and-recovery)
-- [Validation and compatibility](#validation-and-compatibility)
-- [Acknowledgments](#acknowledgments)
-- [License](#license)
+Reference features and metric inputs are written to disk in batches. Retrieval processes all selected references in bounded chunks with float32 features. For a new machine, check [memory and disk requirements](#memory-requirements). For an existing run, see [outputs](#outputs), [recovery](#interruption-and-recovery) and [validation coverage](#validation-and-compatibility).
 
 ## Setup
 
@@ -72,7 +63,7 @@ The original experiments used an NVIDIA GeForce RTX 5090 (32 GB). A GPU's advert
 
 Keep the official training/test splits. Reference images must be normal. The MVTec-format builder rejects training folders containing any class other than `good`; the Real-IAD builder rejects any anomalous training label. They fail with an explanation instead of silently filtering samples. Do not use test images to build the bank.
 
-### MVTec AD
+### Prepare MVTec AD
 
 Download [MVTec AD](https://www.mvtec.com/company/research/datasets/mvtec-ad) and extract it to `../mvtec_anomaly_detection`:
 
@@ -86,7 +77,7 @@ mvtec_anomaly_detection/
     └── ground_truth/<defect_type>/
 ```
 
-### VisA
+### Prepare VisA
 
 Download [VisA](https://github.com/amazon-science/spot-diff) to `../VisA`, then convert it using the included 1-class split:
 
@@ -100,7 +91,7 @@ python prepare_data/prepare_visa.py \
 
 The resulting dataset root is **`../VisA_pytorch/1cls`**, with `<category>/train/good`, `<category>/test/{good,bad}`, and `<category>/ground_truth/bad` directories.
 
-### Real-IAD
+### Prepare Real-IAD
 
 Obtain the dataset through the [Real-IAD project](https://realiad4ad.github.io/Real-IAD/). Extract both the images and JSON annotations so that these paths exist:
 
@@ -118,7 +109,7 @@ Real-IAD/
 
 The loader reads `realiad_jsons/realiad_jsons/<category>.json` and resolves each image path under `realiad_1024/<category>/`. Both Real-IAD scripts default to the same 30 categories.
 
-### 3D-ADAM
+### Prepare 3D-ADAM
 
 Download the [3D-ADAM anomalib-format dataset](https://huggingface.co/datasets/pmchard/3D-ADAM_anomalib) to `../3D-ADAM_anomalib`. These examples use **RGB images only**; `xyz` data are not used.
 
@@ -153,7 +144,7 @@ Each example first builds a shared bank from the listed normal training categori
 
 All four recipes enable the positional bank, use layers `3 6 9 11`, resize to 512, center-crop to 448, and evaluate at mask resolution 256. Dataset-specific `k_image` values are explicit recipe settings, not automatic defaults.
 
-### MVTec AD
+### Run MVTec AD
 
 Build the reference bank:
 
@@ -194,7 +185,7 @@ python rad_mvtec_visa_3dadam.py \
                pill screw toothbrush transistor zipper
 ```
 
-### VisA
+### Run VisA
 
 Build the reference bank:
 
@@ -233,7 +224,7 @@ python rad_mvtec_visa_3dadam.py \
                 macaroni2 pcb1 pcb2 pcb3 pcb4 pipe_fryum
 ```
 
-### Real-IAD
+### Run Real-IAD
 
 Build the reference bank using the default 30-category list:
 
@@ -266,7 +257,7 @@ python rad_real_iad.py \
   --pos_radius 0
 ```
 
-### 3D-ADAM (RGB)
+### Run 3D-ADAM
 
 Build the reference bank:
 
@@ -386,6 +377,11 @@ The active metric implementation no longer depends on pandas `DataFrame._append`
 See [initial CPU validation](docs/VALIDATION.md) and [WSL/RTX 5090 validation](docs/ROG_VALIDATION.md) for checked revisions, commands, memory measurements and limitations. The target-host checks use real DINOv3 weights and the complete 1m1 category (48 normal references and 56 test images), plus CUDA and large synthetic-bank checks. This limited scope does not reproduce the paper's full multi-category benchmarks; larger runs still require their own resource admission.
 
 On the tested host, the final implementation passed 130 regression tests plus 105 subtests and 24 CUDA comparison cases; all seven real-category metrics agreed with the original evaluator within `6.3e-8`. A 6.159 GiB synthetic bank completed under a 1 GiB process RAM budget with 497.57 MiB peak RSS; OS caches are separate.
+
+## Release history
+
+- May 1, 2026 — accepted at ICML 2026.
+- January 28, 2026 — code released.
 
 ## Acknowledgments
 
